@@ -194,7 +194,7 @@ significant_inv <- goodness_of_fit_df[goodness_of_fit_df$p_corrected < 0.05, ]
 observed_count_extractor <- function(dosage_list, line, Inv_ID)
 {
   #' This function will take as an input a list of dosage matrices (each matrix)
-  #' refers to a particular line. THen, using the line and Inv_ID, the dosage 
+  #' refers to a particular line. Then, using the line and Inv_ID, the dosage 
   #' level per plant is going to be extracted.
   #' 
   #' @Arguments: dosage_list: list of dosage matrices
@@ -218,14 +218,98 @@ observed_count_extractor <- function(dosage_list, line, Inv_ID)
 clusterExport(cl, varlist = c("observed_count_extractor", "Data_d_l", 
                               "significant_inv"))
 
-observed_counts_deviants <- parLapply(cl, significant_inv$Line, 
-                                      function(line) {
-  mapply(observed_count_extractor,
-         significant_inv$Inv,
-         MoreArgs = list(dosage_list = Data_d_l),
-         line = line,
-         SIMPLIFY = F)
-})
+observed_counts_deviants <- mapply(significant_inv$Line, significant_inv$Inv, 
+                                   MoreArgs = list(dosage_list = Data_d_l),
+                                   FUN = observed_count_extractor,
+                                   SIMPLIFY = F)
+
+# Merging individual data.frames into a unique one
+observed_counts_deviants <- do.call(rbind, observed_counts_deviants)
+
+# Creating the functions to calculate the X^2_sub1 and X^2_sub2
+
+X2_sub1_calculator <- function(RR, RA, AA)
+{
+  #' Allele frequency homogeneity.
+  #' 
+  #' This function is designed to check the balanced frequency of both alleles
+  #' (p = q, X^2_sub1) for the sample analyzed. Is one of the measurements that 
+  #' are going to be used to know the pattern of selection (gametyc or zygotic).
+  #' 
+  #' @Arguments: RR: Homozygous for the reference allele
+  #'             RA: Heterozygous
+  #'             AA: Homozygous for the alternative allele (inversion)
+  #'
+  #' @Returns: X^2_sub1 value
+  #' 
+  #' @Note: df of the test:
+  #' 2 categories (two alleles) - 1 parameter estimated (p) - 1 = 1 df
+  #' ___________________________________________________________________________
+
+  n <- RR + RA + AA # Total number of plants
+  p <- (2 * RR + RA) / (2 * n) # Calculate the frequency of the reference allele
+  q <- 1 - p # Calculate the frequency of the alternative allele
+  
+  X2_sub1 <- ((2 * n * p - n) ^ 2 + (2 * n * q - n) ^ 2) / n
+  
+  return(X2_sub1)
+}
+
+X2_sub2_calculator <- function(RR, RA, AA)
+{
+  #' F2 distribution.
+  #' 
+  #' This function is designed to check the distribution of different genotypic
+  #' frequencies. Is one of the measurements that are going to be used to know 
+  #' the pattern of selection (gametyc or zygotic).
+  #' 
+  #' @Arguments: RR: Homozygous for the reference allele
+  #'             RA: Heterozygous
+  #'             AA: Homozygous for the alternative allele (inversion)
+  #'
+  #' @Returns: X^2_sub1 value
+  #' 
+  #' @Note: df of the test:
+  #' 3 categories (three genotypes) - 1 parameter estimated (p) - 1 = 1 df
+  #' ___________________________________________________________________________
+
+  n <- RR + RA + AA # Total number of plants
+  p <- (2 * RR + RA) / (2 * n) # Calculate the frequency of the reference allele
+  q <- 1 - p # Calculate the frequency of the alternative allele
+  
+  X2_sub2 <- ((AA - n * p ^ 2) ^ 2) / (n * p ^ 2)  + 
+    ((RA - 2 * n * p * q) ^ 2) / (2 * n * p * q) +
+    ((RR - n * q ^ 2) ^ 2) / (n * q ^ 2)
+  
+  return(X2_sub2)
+}
+
+# Including the measures in the data.frame
+
+observed_counts_deviants$X2_sub1 <- mapply(observed_counts_deviants$RR, 
+                                          observed_counts_deviants$RA, 
+                                          observed_counts_deviants$AA, 
+                                          FUN = X2_sub1_calculator)
+
+observed_counts_deviants$X2_sub2 <- mapply(observed_counts_deviants$RR,
+                                          observed_counts_deviants$RA,
+                                          observed_counts_deviants$AA,
+                                          FUN = X2_sub2_calculator)
+
+# ~ Classifying the selection based on the X^2_sub1 and X^2_sub2 values ----
+
+observed_counts_deviants$X2_sub1_p <- pchisq(observed_counts_deviants$X2_sub1, 
+                                             df = 1, lower.tail = F)
+
+observed_counts_deviants$X2_sub2_p <- pchisq(observed_counts_deviants$X2_sub2,
+                                             df = 1, lower.tail = F)
+
+observed_counts_deviants$Selection <- 
+  ifelse(observed_counts_deviants$X2_sub1_p < 0.05 & 
+           observed_counts_deviants$X2_sub2_p < 0.05, "Zygotic",
+         ifelse(observed_counts_deviants$X2_sub1_p < 0.05 & 
+                  observed_counts_deviants$X2_sub2_p > 0.05, "Gametic",
+                "Zygotic"))
 
 # Stop the cluster after use
 stopCluster(cl)
