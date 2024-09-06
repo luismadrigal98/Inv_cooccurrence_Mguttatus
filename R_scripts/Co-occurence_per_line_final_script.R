@@ -32,6 +32,8 @@ library(gtools)
 library(viridis)
 library(car)
 
+set.seed(1998)
+
 ## *****************************************************************************
 ## 2) Setting the work directory ----
 ## _____________________________________________________________________________
@@ -195,7 +197,7 @@ expec_freq <- matrix(data = c(1/16, 2/16, 1/16, 2/16, 4/16, 2/16,
 
 # 3.2) X2 square test ----
 
-x2_calculator <- function(i, j, dosage_matrix) ## Expectation is not required
+x2_calculator <- function(i, j, dosage_matrix)
 {
   INV1_name <- rownames(dosage_matrix)[i]
   INV2_name <- rownames(dosage_matrix)[j]
@@ -209,7 +211,7 @@ x2_calculator <- function(i, j, dosage_matrix) ## Expectation is not required
     }
   }
   
-  test <- chisq.test(x = observed, simulate.p.value = T, 
+  test <- chisq.test(x = observed, simulate.p.value = T,
                      B = 10000)
   
   x2 <- test$statistic
@@ -630,8 +632,8 @@ jaccard_tanimoto_condenser <- function(results, metainfo)
                           entity_2 = INV_2,
                           Dosage_2 = Dosage_2,
                           ID_2 = ID_2,
-                          chrom_1 = metainfo[metainfo$INV_ID == ID_1, 'chrom'], 
-                          chrom_2 = metainfo[metainfo$INV_ID == ID_2, 'chrom'], 
+                          chrom_1 = metainfo[metainfo$INV_ID == ID_1, 'Chr'], 
+                          chrom_2 = metainfo[metainfo$INV_ID == ID_2, 'Chr'], 
                           jaccard = results[['statistics']][row_i, col_i], 
                           expectation = results[['expectation']][row_i, col_i], 
                           p_value = results[['pvalues']][row_i, col_i])
