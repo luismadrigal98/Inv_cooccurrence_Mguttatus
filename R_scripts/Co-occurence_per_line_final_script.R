@@ -133,58 +133,53 @@ metadata <- read.csv("/home/l338m483/scratch/Cooccurrence_Inv/R_directory/inv_an
 genes_inv_metadata <- read.csv("/home/l338m483/scratch/Corrected_inv_genotype_files/renamed_genes.csv", 
                                  header = T)
 
+## Additional checking step for compliance in the marginals.
+## If there is an inversion with a dosage level of 0, it will be removed.
+## Its effect will be captured in the individual effect on survival analysis
 
-## Additional step checking for compliance in the marginals
+# Searching for problematic in the data
 
-# <><><><><><><><><><>
+# Function to check for zero marginals in the contingency table
+check_zero_marginals <- function(data, row_index, col_index) {
+  row_name <- rownames(data)[row_index]
+  col_name <- rownames(data)[col_index]
 
-# # Searching for problematics in the data
-# 
-# Problematic pair detected between Inv_1 and Inv_49
-# # Assuming Data_d_l is a list of data frames
-# line_444_data <- Data_d_l[['L_444']]
-# 
-# # Function to check for zero marginals in the contingency table
-# check_zero_marginals <- function(data, row_index, col_index) {
-#   row_name <- rownames(data)[row_index]
-#   col_name <- rownames(data)[col_index]
-#   
-#   observed <- matrix(NA, 3, 3)
-#   
-#   for (x in 0:2) {
-#     for (y in 0:2) {
-#       observed[x + 1, y + 1] <- sum(data[row_index, ] == x & data[col_index, ] == y)
-#     }
-#   }
-#   
-#   # Check for zero marginals
-#   if (any(rowSums(observed) == 0) || any(colSums(observed) == 0)) {
-#     return(list(row_name = row_name, col_name = col_name, observed = observed))
-#   } else {
-#     return(NULL)
-#   }
-# }
-# 
-# # Iterate through all pairs of inversions and check for zero marginals
-# problematic_pairs <- list()
-# for (i in 1:(nrow(line_444_data) - 1)) {
-#   for (j in (i + 1):nrow(line_444_data)) {
-#     result <- check_zero_marginals(line_444_data, i, j)
-#     if (!is.null(result)) {
-#       problematic_pairs <- append(problematic_pairs, list(result))
-#     }
-#   }
-# }
-# 
-# # Print the problematic pairs
-# if (length(problematic_pairs) > 0) {
-#   for (pair in problematic_pairs) {
-#     cat("Problematic pair detected between", pair$row_name, "and", pair$col_name, "\n")
-#     print(pair$observed)
-#   }
-# } else {
-#   cat("No problematic pairs detected.\n")
-# }
+  observed <- matrix(NA, 3, 3)
+
+  for (x in 0:2) {
+    for (y in 0:2) {
+      observed[x + 1, y + 1] <- sum(data[row_index, ] == x & data[col_index, ] == y)
+    }
+  }
+
+  # Check for zero marginals
+  if (any(rowSums(observed) == 0) || any(colSums(observed) == 0)) {
+    return(list(row_name = row_name, col_name = col_name, observed = observed))
+  } else {
+    return(NULL)
+  }
+}
+
+marginal_compliance_checking <- function(data) {
+  problematic_pairs <- list()
+  for (i in 1:(nrow(data) - 1)) {
+    for (j in (i + 1):nrow(data)) {
+      result <- check_zero_marginals(data, i, j)
+      if (!is.null(result)) {
+        problematic_pairs <- append(problematic_pairs, list(result))
+      }
+    }
+  }
+
+  return(problematic_pairs)
+}
+
+problematic_pairs <- lapply(Data_d_l, marginal_compliance_checking)
+
+#' There is a particularly interesting case in the data. Inv_49, in the line 
+#' 444 does not exhibit the homozygous state for the inversion (dosage 2). It is
+#' pertinent then to exclude that inversion from posterior analysis to avoid 
+#' problems with marginals 0.
 
 ## *****************************************************************************
 ## 3) Chi-square test for independence of inversions ----
@@ -199,6 +194,22 @@ expec_freq <- matrix(data = c(1/16, 2/16, 1/16, 2/16, 4/16, 2/16,
 
 x2_calculator <- function(i, j, dosage_matrix)
 {
+  #' This function calculates the X2 test for independence between two inversions
+  #' in the dataset. The function will return a dataframe with the results of the
+  #' test.
+  #' 
+  #' @param i The row index of the first inversion
+  #' @param j The row index of the second inversion
+  #' @param dosage_matrix The matrix containing the dosage levels of the inversions
+  #' 
+  #' @return A dataframe with the results of the X2 test
+  #' 
+  #' @notes The function will omit any row or column with zero marginals. This is
+  #' done to avoid problems with the X2 test. The function will also return the
+  #' standardized residuals and the relative contribution of each cell to the X2
+  #' statistic.
+  #' ___________________________________________________________________________
+  
   INV1_name <- rownames(dosage_matrix)[i]
   INV2_name <- rownames(dosage_matrix)[j]
   
@@ -209,6 +220,19 @@ x2_calculator <- function(i, j, dosage_matrix)
       observed[x + 1, y + 1] <- sum(dosage_matrix[i,] == x & 
                                       dosage_matrix[j,] == y)
     }
+  }
+  
+  if (any(rowSums(observed) == 0) || any(colSums(observed) == 0)) {
+    row_to_remove <- rownames(observed)[rowSums(observed) == 0]
+    col_to_remove <- colnames(observed)[colSums(observed) == 0]
+  }
+  
+  if (any(rowSums(observed) == 0)) {
+    observed <- observed[-match(row_to_remove, rownames(observed)), ]
+  }
+  
+  if (any(colSums(observed) == 0)) {
+    observed <- observed[, -match(col_to_remove, colnames(observed))]
   }
   
   test <- chisq.test(x = observed, simulate.p.value = T,
