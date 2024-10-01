@@ -129,10 +129,6 @@ metadata <- read.csv("/home/l338m483/scratch/Cooccurrence_Inv/R_directory/inv_an
 
 ## Importing the name of the genes contained in each inversion
 
-## <<<<<<<<<<<<<<<<<<<<< Delete this after
-genes_inv_metadata <- read.csv("/home/l338m483/scratch/Corrected_inv_genotype_files/renamed_genes.csv", 
-                                 header = T)
-
 ## Additional checking step for compliance in the marginals.
 ## If there is an inversion with a dosage level of 0, it will be removed.
 ## Its effect will be captured in the individual effect on survival analysis
@@ -204,36 +200,18 @@ x2_calculator <- function(i, j, dosage_matrix)
   #' 
   #' @return A dataframe with the results of the X2 test
   #' 
-  #' @notes The function will omit any row or column with zero marginals. This is
-  #' done to avoid problems with the X2 test. The function will also return the
-  #' standardized residuals and the relative contribution of each cell to the X2
-  #' statistic.
+  #' @note In some instances, the result test will not have some of the elements.
+  #' This happen because for INV_49, there is one dosage level that is not present,
+  #' and this result in a contingency analysis of a 2x3 table. This is not a problem
+  #' for the X2 test, but it is for the post-hoc analysis. We will preserve the
+  #' structure of the output, but for those missing elements, the values will be
+  #' NA's.
   #' ___________________________________________________________________________
   
   INV1_name <- rownames(dosage_matrix)[i]
   INV2_name <- rownames(dosage_matrix)[j]
   
-  observed <- matrix(NA, 3, 3)
-  
-  for (x in 0:2) {
-    for (y in 0:2) {
-      observed[x + 1, y + 1] <- sum(dosage_matrix[i,] == x & 
-                                      dosage_matrix[j,] == y)
-    }
-  }
-  
-  if (any(rowSums(observed) == 0) || any(colSums(observed) == 0)) {
-    row_to_remove <- rownames(observed)[rowSums(observed) == 0]
-    col_to_remove <- colnames(observed)[colSums(observed) == 0]
-  }
-  
-  if (any(rowSums(observed) == 0)) {
-    observed <- observed[-match(row_to_remove, rownames(observed)), ]
-  }
-  
-  if (any(colSums(observed) == 0)) {
-    observed <- observed[, -match(col_to_remove, colnames(observed))]
-  }
+  observed <- table(dosage_matrix[i,], dosage_matrix[j,])
   
   test <- chisq.test(x = observed, simulate.p.value = T,
                      B = 10000)
@@ -250,31 +228,33 @@ x2_calculator <- function(i, j, dosage_matrix)
                     p = p_value,
                     dev_1r_1c = dev[1, 1],
                     dev_2r_1c = dev[2, 1],
-                    dev_3r_1c = dev[3, 1],
+                    dev_3r_1c = if(nrow(dev) == 3) dev[3, 1] else NA,
                     dev_1r_2c = dev[1, 2],
                     dev_2r_2c = dev[2, 2],
-                    dev_3r_2c = dev[3, 2],
-                    dev_1r_3c = dev[1, 3],
-                    dev_2r_3c = dev[2, 3],
-                    dev_3r_3c = dev[3, 3],
+                    dev_3r_2c = if(nrow(dev) == 3) dev[3, 2] else NA,
+                    dev_1r_3c = if(ncol(dev) == 3) dev[1, 3] else NA,
+                    dev_2r_3c = if(ncol(dev) == 3) dev[2, 3] else NA,
+                    dev_3r_3c = if(ncol(dev) == 3 & nrow(dev) == 3) dev[3, 3] else NA,
                     sr_1r_1c = standardized_residuals[1, 1],
                     sr_2r_1c = standardized_residuals[2, 1],
-                    sr_3r_1c = standardized_residuals[3, 1],
+                    sr_3r_1c = if(nrow(standardized_residuals) == 3) standardized_residuals[3, 1] else NA,
                     sr_1r_2c = standardized_residuals[1, 2],
                     sr_2r_2c = standardized_residuals[2, 2],
-                    sr_3r_2c = standardized_residuals[3, 2],
-                    sr_1r_3c = standardized_residuals[1, 3],
-                    sr_2r_3c = standardized_residuals[2, 3],
-                    sr_3r_3c = standardized_residuals[3, 3],
+                    sr_3r_2c = if(nrow(standardized_residuals) == 3) standardized_residuals[3, 2] else NA,
+                    sr_1r_3c = if(ncol(standardized_residuals) == 3) standardized_residuals[1, 3] else NA,
+                    sr_2r_3c = if(ncol(standardized_residuals) == 3) standardized_residuals[2, 3] else NA,
+                    sr_3r_3c = if (ncol(standardized_residuals) == 3 & 
+                                   nrow(standardized_residuals) == 3) standardized_residuals[3, 3] else NA,
                     rel_cont_1r_1c = relative_contribution[1, 1],
                     rel_cont_2r_1c = relative_contribution[2, 1],
-                    rel_cont_3r_1c = relative_contribution[3, 1],
+                    rel_cont_3r_1c = if(nrow(relative_contribution) == 3) relative_contribution[3, 1] else NA,
                     rel_cont_1r_2c = relative_contribution[1, 2],
                     rel_cont_2r_2c = relative_contribution[2, 2],
-                    rel_cont_3r_2c = relative_contribution[3, 2],
-                    rel_cont_1r_3c = relative_contribution[1, 3],
-                    rel_cont_2r_3c = relative_contribution[2, 3],
-                    rel_cont_3r_3c = relative_contribution[3, 3]))
+                    rel_cont_3r_2c = if(nrow(relative_contribution) == 3) relative_contribution[3, 2] else NA,
+                    rel_cont_1r_3c = if(ncol(relative_contribution) == 3) relative_contribution[1, 3] else NA,
+                    rel_cont_2r_3c = if(ncol(relative_contribution) == 3) relative_contribution[2, 3] else NA,
+                    rel_cont_3r_3c = if(ncol(relative_contribution) == 3 &
+                                        nrow(relative_contribution) == 3) relative_contribution[3, 3] else NA))
 }
 
 results_x2 <- lapply(X = Data_d_l, FUN = function(observed_matrix)
@@ -349,13 +329,133 @@ results_x2_filtered_df <- sapply(X = results_x2_df,
 
 # Correction of the p-values ----
 
-## Remeber that you should check for a correction method that takes into accouint 
-#the discrete nature of your data
+# Function to estimate π0 using Storey's method
 
-##' <<<<<<<<<<<<<<<<<<
-##' <<<<<<<<<<<<<<<||||||||||||||||||||||
+estimate_pi0_storey <- function(p_values, lambda = seq(0.05, 0.95, 0.05)) 
+{
+  #' This function estimates the proportion of true null hypotheses using Storey's
+  #' method. The function will return the estimated proportion of true null
+  #' hypotheses for each value of lambda.
+  #' 
+  #' @param p_values A numeric vector with the p-values of the tests
+  #' @param lambda A numeric vector with the values of lambda to be used in the
+  #' estimation
+  #' 
+  #' @return A numeric vector with the estimated proportion of true null hypotheses
+  #' for each value of lambda
+  #' ___________________________________________________________________________
+  
+  m <- length(p_values)
+  pi0 <- sapply(lambda, function(l) mean(p_values > l) / (1 - l))
+  pi0_spline <- smooth.spline(lambda, pi0, df = 3)
+  pi0_est <- predict(pi0_spline, x = 1)$y
+  pi0_est <- min(pi0_est, 1)
+  return(pi0_est)
+}
 
-# The correction will be made per line
+calculate_qvalues <- function(p_values, pi0 = NULL) 
+{
+  #' This function calculates the q-values for a set of p-values using the method
+  #' proposed by Storey. The function will return a numeric vector with the q-values
+  #' for each p-value.
+  #' 
+  #' @param p_values A numeric vector with the p-values of the tests
+  #' @param pi0 A numeric value with the estimated proportion of true null hypotheses
+  #' 
+  #' @return A numeric vector with the q-values for each p-value
+  #' ___________________________________________________________________________
+  
+  if (is.null(pi0)) {
+    pi0 <- estimate_pi0_storey(p_values)
+  }
+  
+  p_ordered <- sort(p_values)
+  m <- length(p_values)
+  
+  q_values <- pi0 * m * p_ordered / (1:m)
+  q_values <- pmin(1, cummin(q_values[length(q_values):1]))[length(q_values):1]
+  
+  q_values[match(p_values, p_ordered)] <- q_values
+  
+  return(q_values)
+}
+
+jitter_p <- function(p, amount = 1e-8) 
+{
+  #' This function adds jitter to the p-values to correct for ties. The function
+  #' will return a numeric vector with the jittered p-values.
+  #' 
+  #' @param p A numeric vector with the p-values of the tests
+  #' @param amount A numeric value with the amount of jitter to be added
+  #' 
+  #' @return A numeric vector with the jittered p-values
+  #' ___________________________________________________________________________
+  
+  p + runif(length(p), 0, amount)
+}
+
+# Function to perform the integrated analysis
+integrated_qvalue_analysis <- function(df, p_col = "p", 
+                                       inv1_col = "INV_1", 
+                                       inv2_col = "INV_2") 
+{
+  #' This function performs an integrated analysis for correcting the p_values
+  #' while providing some useful outputs for visualization. The function will
+  #' return a list with the corrected p-values, the estimated proportion of true
+  #' null hypotheses, the number of truly significant tests, and three plots
+  #' showing the distribution of p-values, the relationship between p-values and
+  #' q-values, and a network graph of significant associations.
+  #' 
+  #' @param df A data frame with the results of the tests
+  #' @param p_col A character string with the name of the column containing the
+  #' p-values
+  #' @param inv1_col A character string with the name of the column containing the
+  #' first inversion
+  #' @param inv2_col A character string with the name of the column containing the
+  #' second inversion
+  #' 
+  #' @return A list with the corrected p-values, the estimated proportion of true
+  #' null hypotheses, the number of truly significant tests, and three plots
+  #' showing the distribution of p-values, the relationship between p-values and
+  #' q-values, and a network graph of significant associations
+  #' ___________________________________________________________________________
+  
+  # Jitter p-values to handle discrete values
+  df$p_jittered <- jitter_p(df[[p_col]])
+  
+  # Estimate π0
+  pi0 <- estimate_pi0_storey(df$p_jittered)
+  
+  # Calculate q-values
+  df$q_value <- calculate_qvalues(df$p_jittered, pi0)
+  
+  # Estimate number of truly significant tests
+  n_significant <- round(nrow(df) * (1 - pi0))
+  
+  return(list(
+    df = df,
+    pi0 = pi0,
+    n_significant = n_significant
+  ))
+}
+
+# Apply the integrated analysis to your results
+results_x2_filtered_df <- lapply(results_x2_filtered_df, function(df) {
+  integrated_qvalue_analysis(df)
+})
+
+# Print results and display plots for each dataset
+for (name in names(results_x2_filtered_df)) {
+  cat("\nResults for", name, ":\n")
+  cat("Estimated proportion of true null hypotheses (π0):", 
+      results_x2_filtered_df[[name]]$pi0, "\n")
+  cat("Estimated number of truly significant tests:", 
+      results_x2_filtered_df[[name]]$n_significant, "\n")
+}
+
+# 
+
+
 
 p_corrector <- function(df, var = "p", method = "BH")
 {
