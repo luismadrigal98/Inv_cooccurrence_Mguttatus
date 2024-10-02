@@ -329,134 +329,6 @@ results_x2_filtered_df <- sapply(X = results_x2_df,
 
 # Correction of the p-values ----
 
-# Function to estimate π0 using Storey's method
-
-estimate_pi0_storey <- function(p_values, lambda = seq(0.05, 0.95, 0.05)) 
-{
-  #' This function estimates the proportion of true null hypotheses using Storey's
-  #' method. The function will return the estimated proportion of true null
-  #' hypotheses for each value of lambda.
-  #' 
-  #' @param p_values A numeric vector with the p-values of the tests
-  #' @param lambda A numeric vector with the values of lambda to be used in the
-  #' estimation
-  #' 
-  #' @return A numeric vector with the estimated proportion of true null hypotheses
-  #' for each value of lambda
-  #' ___________________________________________________________________________
-  
-  m <- length(p_values)
-  pi0 <- sapply(lambda, function(l) mean(p_values > l) / (1 - l))
-  pi0_spline <- smooth.spline(lambda, pi0, df = 3)
-  pi0_est <- predict(pi0_spline, x = 1)$y
-  pi0_est <- min(pi0_est, 1)
-  return(pi0_est)
-}
-
-calculate_qvalues <- function(p_values, pi0 = NULL) 
-{
-  #' This function calculates the q-values for a set of p-values using the method
-  #' proposed by Storey. The function will return a numeric vector with the q-values
-  #' for each p-value.
-  #' 
-  #' @param p_values A numeric vector with the p-values of the tests
-  #' @param pi0 A numeric value with the estimated proportion of true null hypotheses
-  #' 
-  #' @return A numeric vector with the q-values for each p-value
-  #' ___________________________________________________________________________
-  
-  if (is.null(pi0)) {
-    pi0 <- estimate_pi0_storey(p_values)
-  }
-  
-  p_ordered <- sort(p_values)
-  m <- length(p_values)
-  
-  q_values <- pi0 * m * p_ordered / (1:m)
-  q_values <- pmin(1, cummin(q_values[length(q_values):1]))[length(q_values):1]
-  
-  q_values[match(p_values, p_ordered)] <- q_values
-  
-  return(q_values)
-}
-
-jitter_p <- function(p, amount = 1e-8) 
-{
-  #' This function adds jitter to the p-values to correct for ties. The function
-  #' will return a numeric vector with the jittered p-values.
-  #' 
-  #' @param p A numeric vector with the p-values of the tests
-  #' @param amount A numeric value with the amount of jitter to be added
-  #' 
-  #' @return A numeric vector with the jittered p-values
-  #' ___________________________________________________________________________
-  
-  p + runif(length(p), 0, amount)
-}
-
-# Function to perform the integrated analysis
-integrated_qvalue_analysis <- function(df, p_col = "p", 
-                                       inv1_col = "INV_1", 
-                                       inv2_col = "INV_2") 
-{
-  #' This function performs an integrated analysis for correcting the p_values
-  #' while providing some useful outputs for visualization. The function will
-  #' return a list with the corrected p-values, the estimated proportion of true
-  #' null hypotheses, the number of truly significant tests, and three plots
-  #' showing the distribution of p-values, the relationship between p-values and
-  #' q-values, and a network graph of significant associations.
-  #' 
-  #' @param df A data frame with the results of the tests
-  #' @param p_col A character string with the name of the column containing the
-  #' p-values
-  #' @param inv1_col A character string with the name of the column containing the
-  #' first inversion
-  #' @param inv2_col A character string with the name of the column containing the
-  #' second inversion
-  #' 
-  #' @return A list with the corrected p-values, the estimated proportion of true
-  #' null hypotheses, the number of truly significant tests, and three plots
-  #' showing the distribution of p-values, the relationship between p-values and
-  #' q-values, and a network graph of significant associations
-  #' ___________________________________________________________________________
-  
-  # Jitter p-values to handle discrete values
-  df$p_jittered <- jitter_p(df[[p_col]])
-  
-  # Estimate π0
-  pi0 <- estimate_pi0_storey(df$p_jittered)
-  
-  # Calculate q-values
-  df$q_value <- calculate_qvalues(df$p_jittered, pi0)
-  
-  # Estimate number of truly significant tests
-  n_significant <- round(nrow(df) * (1 - pi0))
-  
-  return(list(
-    df = df,
-    pi0 = pi0,
-    n_significant = n_significant
-  ))
-}
-
-# Apply the integrated analysis to your results
-results_x2_filtered_df <- lapply(results_x2_filtered_df, function(df) {
-  integrated_qvalue_analysis(df)
-})
-
-# Print results and display plots for each dataset
-for (name in names(results_x2_filtered_df)) {
-  cat("\nResults for", name, ":\n")
-  cat("Estimated proportion of true null hypotheses (π0):", 
-      results_x2_filtered_df[[name]]$pi0, "\n")
-  cat("Estimated number of truly significant tests:", 
-      results_x2_filtered_df[[name]]$n_significant, "\n")
-}
-
-# 
-
-
-
 p_corrector <- function(df, var = "p", method = "BH")
 {
   df <- df |> mutate(p_corrected = p.adjust(df[, var], method = method))
@@ -678,6 +550,14 @@ for (i in 1: length(names(x2_results_filtered_expanded)))
 ## *****************************************************************************
 ## 4) Calculation of alternative indexes used in community studies ----
 ## _____________________________________________________________________________
+
+# Filtering out rows with 0 marginals. If something is not there in any instance,
+# we cannot test for association with another inversion.
+
+Data_p_a <- lapply(Data_p_a, function(x) x[!apply(x, 1, 
+                                                  function(y) all(y == 0)), ])
+
+# Instance INV_49_2 in line 444 was eliminated from the analysis
 
 # 4.1) Jaccard ----
 
