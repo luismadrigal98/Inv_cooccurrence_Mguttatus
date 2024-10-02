@@ -31,6 +31,7 @@ library(repmod)
 library(gtools)
 library(viridis)
 library(car)
+library(nortest)
 
 set.seed(1998)
 
@@ -750,12 +751,12 @@ affinity_filter <- function(affinity_res, metadata, filter_LG = T,
     dplyr::select(-Generic_name_1, -State_1, -Generic_name_2, -State_2)
   
   df <- df |> 
-    left_join(metadata |> dplyr::select(INV_ID, chrom), by = c("INV_ID_1" = "INV_ID")) |> 
-    rename(chrom1 = chrom)
+    left_join(metadata |> dplyr::select(INV_ID, Chr), by = c("INV_ID_1" = "INV_ID")) |> 
+    rename(chrom1 = Chr)
   
   df <- df |> 
-    left_join(metadata |> dplyr::select(INV_ID, chrom), by = c("INV_ID_2" = "INV_ID")) |> 
-    rename(chrom2 = chrom)
+    left_join(metadata |> dplyr::select(INV_ID, Chr), by = c("INV_ID_2" = "INV_ID")) |> 
+    rename(chrom2 = Chr)
   
   if (filter_LG == T)
   {
@@ -823,7 +824,7 @@ for (i in 1:9) {
 
 names(merged_results) <- names(x2_results_filtered_expanded)
 
-## Combining all dataframes in an unique one ----
+## Combining all data frames in an unique one ----
 
 # Add a new column to each data frame with the line information
 for (i in 1:length(merged_results)) {
@@ -914,6 +915,11 @@ support_counter <- function(supp_X2_posthoc,
                             supp_Affinity,
                             supp_Jaccard)
 {
+  # Remove rows and columns with NA values
+  row_na <- apply(supp_X2_posthoc, 1, function(x) any(!is.na(x)))
+  col_na <- apply(supp_X2_posthoc, 2, function(x) any(!is.na(x)))
+  supp_X2_posthoc <- supp_X2_posthoc[row_na, col_na]
+  
   names <- list(rownames(supp_X2_posthoc), colnames(supp_X2_posthoc))
   
   supp_X2_posthoc <- matrix(as.numeric(supp_X2_posthoc < 0.05), 
@@ -975,8 +981,8 @@ mask_chromosomes <- function(p_matrix, metadata)
   {
     for (j in 1:length(col_names))
     {
-      if (metadata[metadata$INV_ID == row_names[i], "chrom"] != 
-          metadata[metadata$INV_ID == col_names[j], "chrom"])
+      if (metadata[metadata$INV_ID == row_names[i], "Chr"] != 
+          metadata[metadata$INV_ID == col_names[j], "Chr"])
       {
         p_matrix[i, j] <- NA
       }
@@ -1168,9 +1174,9 @@ dev.off()
 ## After checking the premise of normality of residuals, and given the detected
 # deviations, a robust linear model will be employed.
 
-shapiro.test(model1$residuals)
-shapiro.test(model2$residuals)
-shapiro.test(model3$residuals)
+lillie.test(model1$residuals)
+lillie.test(model2$residuals)
+lillie.test(model3$residuals)
 
 # 7.6) Robust linear models ----
 
@@ -1270,7 +1276,7 @@ sig_network_builder <- function(nodes, meta_nodes, edges, type = "both",
 {
   # Create the nodes
   nodes <- data.frame(name = nodes)
-  nodes$chromosome <- meta_nodes[, 'chrom'][match(
+  nodes$chromosome <- meta_nodes[, 'Chr'][match(
     sapply(strsplit(nodes$name, "_"), `[`, 2), meta_nodes$INV_ID)]
   
   nodes$name <- sapply(nodes$name, function(x) {
@@ -1380,7 +1386,7 @@ sig_network_builder_lite <- function(nodes, meta_nodes, edges, type = "both",
 {
   # Create the nodes
   nodes <- data.frame(name = nodes)
-  nodes$chromosome <- meta_nodes[, 'chrom'][match(
+  nodes$chromosome <- meta_nodes[, 'Chr'][match(
     sapply(strsplit(nodes$name, "_"), `[`, 2), meta_nodes$INV_ID)]
   
   nodes$name <- sapply(nodes$name, function(x) {
@@ -1554,7 +1560,11 @@ pdf("Plots/Networks/Chromosome_legend.pdf", width = 2, height = 8)
 
 legend_plot <- ggplot(df, aes(x = 1, fill = chromosome)) +
   geom_tile(aes(y = chromosome)) +
-  scale_fill_manual(values = df$color, guide = guide_legend(title = "Chromosome", direction = "vertical", title.position = "top", label.position = "right")) +
+  scale_fill_manual(values = df$color, 
+                    guide = guide_legend(title = "Chromosome", 
+                                         direction = "vertical", 
+                                         title.position = "top", 
+                                         label.position = "right")) +
   theme_void()
 
 # Print the plot
@@ -1565,6 +1575,8 @@ dev.off()
 # 8.3) Study case of inversions 31 and 40 ----
 
 # Building a network with only 4 nodes (two dosages for 31 and two for 40)
+
+## Search for this guys ..... <<<<<<<<<<<<
 
 nodes_31_40 <- c("Inv_31_1", "Inv_31_2", "Inv_40_1", "Inv_40_2")
 
