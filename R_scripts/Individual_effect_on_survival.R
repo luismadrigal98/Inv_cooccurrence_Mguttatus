@@ -26,7 +26,7 @@ set.seed(1998)
 ## 2) Setting the work directory ----
 ## _____________________________________________________________________________
 
-setwd("/home/l338m483/scratch/R_Directory")
+setwd("/home/l338m483/scratch/Cooccurrence_Inv/R_directory/SGA")
 
 ## *****************************************************************************
 ## 3) Importing the data ----
@@ -311,38 +311,6 @@ observed_counts_deviants$Selection <-
                   observed_counts_deviants$X2_sub2_p > 0.05, "Gametic",
                 "Zygotic"))
 
-# ~ Clasifying the Zygotic pattern as a function of the genotypes ----
-
-#' Classifciation of zygotic selection:
-#' _. If AA : aa = 1 : 1, and (AA + aa) : Aa = 1 : 1 -> Normal
-#' _. If AA : aa = 1 : 1, (AA + aa) : Aa != 1 : 1, and (AA + aa) > Aa -> Het 
-#' deficit (Type 1)
-#' _. If AA : aa = 1 : 1, (AA + aa) : Aa != 1 : 1, and (AA + aa) < Aa -> Het 
-#' excess (Type 2)
-#' _. If AA : aa != 1 : 1, and (AA + aa) : Aa = 1 : 1 -> Partial recesive 
-#' deleterious gene (type 3)
-#' _. If AA : aa != 1 : 1, (AA + aa) : Aa != 1 : 1, and and (AA + aa) > Aa -> 
-#' Partial recesive deleterious gene (Type 4)
-#' _. If AA : aa != 1 : 1, (AA + aa) : Aa != 1 : 1, and and (AA + aa) < Aa ->
-#' Homozygous deletion (Type 5)
-
-zygotic_selection_discriminator <- function(RR, AR, AA)
-{
-  #' This function will take a marker under zygotic selection and will provide
-  #' a classification of the selection based on the genotypic frequencies.
-  #' 
-  #' @Arguments: RR: Homozygous for the reference allele
-  #'             RA: Heterozygous
-  #'             AA: Homozygous for the alternative allele (inversion)
-  #'             
-  #' @Returns: A classification of the selection.
-  
-  if (Qtest(c(AA, RR), p = c(1, 1))$p.value > 0.05)
-  {
-    
-  }
-}
-
 # ~ Calculating the segregation distortion value (SDV) ----
 
 #' The segregation distortion value is the natural logarithm of the omnibus X2
@@ -350,6 +318,21 @@ zygotic_selection_discriminator <- function(RR, AR, AA)
 
 significant_inv <- significant_inv |>
   mutate(SDV = -log(p_value))
+
+#' Adding the distortion segregation value to the dataframe with all inversions
+
+goodness_of_fit_df <- goodness_of_fit_df |>
+ mutate(SDV = -log(p_value))
+
+# Exporting the results
+
+write.csv(goodness_of_fit_df, 
+          file = "/home/l338m483/scratch/Cooccurrence_Inv/R_directory/Results/goodness_of_fit_individual_effect.csv",
+          row.names = F)
+
+write.csv(significant_inv, 
+          file = "/home/l338m483/scratch/Cooccurrence_Inv/R_directory/Results/significant_inv_individual_effect.csv",
+          row.names = F)
 
 # Stop the cluster after use
 stopCluster(cl)

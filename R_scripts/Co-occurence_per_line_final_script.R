@@ -834,7 +834,7 @@ for (i in 1:length(merged_results)) {
 # Combine all data frames into one
 final_result <- do.call(rbind, merged_results)
 
-# Depuring the final data frame
+# Depuration of the final data frame
 
 final_result <- final_result |>
   dplyr::select(line, INV_1, INV_2, chrom_1, chrom_2, X2_global, p_X2_global, 
@@ -870,6 +870,7 @@ final_result_stringent_all <- final_result |>
 
 ## Saving the data frame sinto csv files
 
+write.csv(final_result, "Results/final_result_co_occurrence.csv", row.names = FALSE)
 write.csv(final_result_relaxed_any, "Results/final_result_relaxed_any.csv", 
           row.names = FALSE)
 write.csv(final_result_relaxed_all, "Results/final_result_relaxed_all.csv", 
@@ -1572,29 +1573,80 @@ print(legend_plot)
 
 dev.off()
 
-# 8.3) Study case of inversions 31 and 40 ----
+# 8.3) Study case of inversions 29, 32, and 40 ----
 
-# Building a network with only 4 nodes (two dosages for 31 and two for 40)
+# Building a network with only 6 nodes (two dosages for the study cases)
 
-## Search for this guys ..... <<<<<<<<<<<<
+# Function to count the occurrences of each inversion across the lines
+count_inversions <- function(data_list) {
+  # Initialize an empty list to store inversion counts
+  inversion_counts <- list()
+  
+  # Loop through each matrix in the list
+  for (name in names(data_list)) {
+    # Get the row names (inversion names) for the current matrix
+    inversions <- rownames(data_list[[name]])
+    
+    # Count the occurrences of each inversion
+    for (inversion in inversions) {
+      if (inversion %in% names(inversion_counts)) {
+        inversion_counts[[inversion]] <- inversion_counts[[inversion]] + 1
+      } else {
+        inversion_counts[[inversion]] <- 1
+      }
+    }
+  }
+  
+  # Convert the list to a data frame for easier manipulation
+  inversion_counts_df <- data.frame(
+    inversion = names(inversion_counts),
+    count = unlist(inversion_counts)
+  )
+  
+  return(inversion_counts_df)
+}
 
-nodes_31_40 <- c("Inv_31_1", "Inv_31_2", "Inv_40_1", "Inv_40_2")
+# Function to select inversions that appear multiple times
+select_frequent_inversions <- function(inversion_counts_df, min_count = 2) {
+  # Filter inversions that appear at least min_count times
+  frequent_inversions <- inversion_counts_df[
+    inversion_counts_df$count >= min_count, ]
+  
+  return(frequent_inversions)
+}
 
-final_result_31_40 <- final_result |>
-  filter(INV_1 %in% c("Inv_31_1", "Inv_31_2") & 
-           INV_2 %in% c("Inv_40_1", "Inv_40_2"))
+# Example usage
+inversion_counts_df <- count_inversions(Data_d_l)
+frequent_inversions <- select_frequent_inversions(inversion_counts_df, 
+                                                  min_count = 7)
 
-final_result_split_31_40 <- split(final_result_31_40, final_result_31_40$Line)
+# Print the frequent inversions
+print(frequent_inversions)
 
-networks_31vs40 <- mapply(sig_network_builder_lite, 
-                          final_result_split_31_40,
-                          MoreArgs = list(nodes = nodes_31_40,
+nodes_29_32_40 <- c("Inv_29_1", "Inv_29_2", "Inv_32_1", "Inv_32_2", 
+                    "Inv_40_1", "Inv_40_2")
+
+final_result_29_32_40 <- final_result |>
+  filter(INV_1 %in% c("Inv_29_1", "Inv_29_2", "Inv_32_1", "Inv_32_2", 
+                      "Inv_40_1", "Inv_40_2") & 
+           INV_2 %in% c(c("Inv_29_1", "Inv_29_2", "Inv_32_1", "Inv_32_2", 
+                          "Inv_40_1", "Inv_40_2")))
+
+final_result_29_32_40 <- split(final_result_29_32_40, 
+                               final_result_29_32_40$Line)
+
+networks_29_32_40 <- mapply(sig_network_builder_lite, 
+                          final_result_29_32_40,
+                          MoreArgs = list(nodes = nodes_29_32_40,
                                           meta_nodes = metadata),
                           SIMPLIFY = FALSE)
 
-names(networks_31vs40) <- c("SUB_L_444", "SUB_L_502", "SUB_L_664", "SUB_L_909")
+names(networks_29_32_40) <- c("SUB_L_1034", "SUB_L_1192", "SUB_L_155",  
+                              "SUB_L_444",  "SUB_L_502",
+                              "SUB_L_541", "SUB_L_62", 
+                              "SUB_L_664", "SUB_L_909")
 
-plot_network_lite(networks_31vs40, 
+plot_network_lite(networks_29_32_40, 
              edge_breaks = c(0.001, 0.008, 0.03, 0.05, 0.07, 0.10),
              range = c(1, 10))
 

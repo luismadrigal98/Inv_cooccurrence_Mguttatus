@@ -12,9 +12,10 @@ library(CooccurrenceAffinity)
 library(jaccard)
 library(tidyverse)
 
-## 2) Defining the working directory ----
+## 2) Defining the working directory and a seed ----
 
-setwd("/home/l338m483/scratch/Corrected_inv_genotype_files/Directory/Simulation")
+set.seed(1998) # For reproducibility
+setwd("/home/l338m483/scratch/Cooccurrence_Inv/R_directory/Simulation")
 
 ## 1) Simulating the tables ----
 
