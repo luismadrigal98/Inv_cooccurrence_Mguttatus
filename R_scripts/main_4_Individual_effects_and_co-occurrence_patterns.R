@@ -15,6 +15,8 @@
 ##' risk of false positives.
 ##' ____________________________________________________________________________
 
+## >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> START <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 ## *****************************************************************************
 ## 1) Setting the working directory ----
 ## _____________________________________________________________________________
@@ -41,7 +43,8 @@ env_setup <- function()
     "ggplot2", 
     "tidyr", 
     "corrplot",
-    "vegan"
+    "vegan",
+    "MASS"
   )
   
   invisible(sapply(required_packages, function(pkg) {
@@ -54,7 +57,7 @@ env_setup <- function()
   # Validate data files (result of main analysis 1 and 2)
   required_files <- c(
     file.path("Results", "goodness_of_fit_individual_effect.csv"),
-    file.path("Results", "final_result_co_occurrence.csv")
+    file.path("Results", "results_x2_df.rds")
   )
   
   missing_files <- required_files[!file.exists(required_files)]
@@ -64,5 +67,91 @@ env_setup <- function()
       "You can manually set a work directory using setwd() or use the 'here' package."
     )
   }
+  
+  # Sourcing the required auxiliary functions
+  
+  source(file.path("Auxiliary_functions", "significant_X2_counter.R"))
 }
 
+## *****************************************************************************
+## 3) Main analysis ----
+## _____________________________________________________________________________
+
+main <- function()
+{
+  # Preparing the environment
+  env_setup()
+  
+  # Setting the directory where the graphs are going to be saved
+  graphs <- "/home/l338m483/scratch/Cooccurrence_Inv/R_directory/Plots/Ind_vs_Co-occurrence"
+  output_dir <- "/home/l338m483/scratch/Cooccurrence_Inv/R_directory/Results"
+  
+  if (!dir.exists(graphs)) 
+  {
+    dir.create(graphs)
+  }
+  
+  # Load the and prepare the data
+  goodness_of_fit <- read.csv(file.path("Results", 
+                                        "goodness_of_fit_individual_effect.csv"))
+  omnibus_X2_results <- readRDS(file.path("Results", "results_x2_df.rds"))
+  
+  # Summarize co-occurrence patterns for each inversion ----
+  inversion_summary_X2_summary <- 
+    mapply(significant_X2_counter, omnibus_X2_results, 
+           names(omnibus_X2_results), SIMPLIFY = FALSE)
+  
+  inversion_summary_X2_summary <- do.call(rbind, inversion_summary_X2_summary)
+  
+  # Merge with SDV data
+  analysis_data <- goodness_of_fit %>%
+    dplyr::select(Line, Inv, SDV) %>%
+    inner_join(inversion_summary_X2_summary, by = c("Line", "Inv"))
+  
+  # Correlation analysis
+  cor_matrix <- cor(analysis_data %>% dplyr::select(-Line, -Inv), 
+                    method = "spearman")
+  
+  # Plotting the correlation matrix
+  
+  pdf(file.path(graphs, "correlation_matrix.pdf"), width = 10, height = 10)
+  
+  corrplot(cor_matrix, method = "color", type = "upper", order = "hclust", 
+           tl.col = "black", tl.srt = 45)
+  
+  dev.off()
+  
+  # GLM
+  # It could be appropriate Poisson or the Negative Binomial (nevertheles, there is
+  # over dispersion in the data, so, negative binomial is the best choice)
+
+  quasi_poisson_model <- glm(sig_count ~ SDV + Line, 
+                             data = analysis_data, family = quasipoisson())
+  
+  out <- summary(quasi_poisson_model)
+  print(out)
+  
+  write.csv(out$coefficients, file = file.path(output_dir, 
+                                               "lm_results_Ind_and_Co-occurrence.csv"))
+  
+  # Visualize relationships
+  long_data <- analysis_data %>%
+    pivot_longer(cols = c(mean_p_value, sig_count),
+                 names_to = "Metric", values_to = "Value")
+  
+  pdf(file.path(graphs, "scatterplot_metrics.pdf"), width = 10, height = 10)
+  
+  ggplot(long_data, aes(x = Value, y = SDV)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE) +
+    facet_wrap(~ Metric, scales = "free_x") +
+    theme_minimal() +
+    labs(title = "Relationship between SDV and omnibus X2 test results for inversion dosage independence",
+         x = "Metric Value", y = "Segregation Distortion Value (SDV)")
+  
+  dev.off()
+}
+  
+main()
+
+## <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< END >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ##
