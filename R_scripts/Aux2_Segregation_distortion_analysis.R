@@ -1,122 +1,20 @@
-##' Individual effects of inversion over survival
+##' @title Are you with me? Co-occurrence tests from community ecology can 
+##' identify positive and negative epistasis between inversions in Mimulus 
+##' guttatus
 ##' 
-##' First step in the survival based analysis of inversion over M. guttatus
-##' plants. Next step will be co-occurrence analysis inversion pairs to explore
-##' patterns of repulsion and attraction.
+##' @description This script will explore the segregation distortion analysis
+##' for the inversions considered in the study. Essentaily, it is an exploration
+##' of the individual effect of each inversion in the survival of Mimulus 
+##' guttatus.
 ##' 
 ##' @Author: Luis Javier Madriga-Roca & John K. Kelly
+##' 
 ##' @Date: 09/03/2024
 ##' ____________________________________________________________________________
 ##' <<<<<<<<<<<<<<<<<<<<<<<<<<<< Start >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 ## *****************************************************************************
-## 1) Load the required libraries ----
-## _____________________________________________________________________________
-
-library(parallel)
-library(dplyr)
-library(ggplot2)
-library(DescTools)
-
-cl <- makeCluster(detectCores())
-
-set.seed(1998)
-
-## *****************************************************************************
-## 2) Setting the work directory ----
-## _____________________________________________________________________________
-
-setwd("/home/l338m483/scratch/Cooccurrence_Inv/R_directory/SGA")
-
-## *****************************************************************************
-## 3) Importing the data ----
-## _____________________________________________________________________________
-
-Data <- list()
-
-for(file in list.files('/home/l338m483/scratch/Cooccurrence_Inv/CSVs', 
-                       full.names = T))
-{
-  name <- strsplit(x = file, split = '/')[[1]][7]
-  name <- strsplit(x = name, split = '_')[[1]][4]
-  name <- name <- sub("\\..*$", "", name)
-  
-  Data[[paste0("Data_", name)]] <- read.csv(file, header = T)
-  
-  rm(file)
-  rm(name)
-}
-
-dosage_splitter <- function(Data, probes_col = 1)
-{
-  Probes <- Data[, probes_col]
-  
-  new_df <- data.frame()
-  
-  for (i in names(Data[, -probes_col]))
-  {
-    old_column <- Data[, i]
-    df <- setNames(data.frame(ifelse(test = old_column == 1, 1, 0),
-                              ifelse(test = old_column == 2, 1, 0)),
-                   c(paste0(i, "_1"), paste0(i, "_2")))
-    
-    if (length(new_df) != 0) 
-    {
-      new_df <- cbind(new_df, df)
-    }
-    
-    else
-    {
-      new_df <- df
-    }
-  }
-  
-  return(cbind(Probes, new_df))
-}
-
-Data_splitted <- lapply(X = Data, FUN = dosage_splitter)
-
-# Create an empty list to store the matrices of presence/absence
-Data_p_a <- list()
-
-# Iterate over each object in the current R environment
-for (object in names(Data_splitted)) 
-{
-  # Transform the data frame
-  new_matrix <- as.matrix(t(Data_splitted[[object]][, -1]))
-  colnames(new_matrix) <- Data_splitted[[object]]$Probes
-  
-  # Add the transformed matrix to the list
-  Data_p_a[[paste0('L_', strsplit(object, "_")[[1]][2])]] <- new_matrix
-  
-  rm(new_matrix)
-  rm(object)
-}
-
-# Create an empty list to store the matrices of dosage levels
-
-Data_d_l <- list()
-
-for (object in names(Data))
-{
-  # Transform the data frame
-  new_matrix <- as.matrix(t(Data[[object]][, -1]))
-  colnames(new_matrix) <- Data[[object]]$Probes
-  
-  # Add the transformed matrix to the list
-  Data_d_l[[paste0('L_', strsplit(object, "_")[[1]][2])]] <- new_matrix
-  
-  rm(new_matrix)
-  rm(object)
-}
-
-## Importing the information related to position and chromosome of the INV
-
-metadata <- read.csv("/home/l338m483/scratch/Cooccurrence_Inv/R_directory/inv_and_gene_metadata.csv", 
-                     header = T)
-
-## *****************************************************************************
-## 4) Distortion segregation analysis ----
+## 1) Distortion segregation analysis ----
 ## _____________________________________________________________________________
 
 G_calculator <- function(row, dosage_matrix, exp = c(1/4, 1/2, 1/4)) {
