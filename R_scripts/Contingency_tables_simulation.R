@@ -12,17 +12,10 @@ library(CooccurrenceAffinity)
 library(jaccard)
 library(tidyverse)
 
-## 2) Defining the working directory and a seed ----
-
-set.seed(1998) # For reproducibility
-setwd("/home/l338m483/scratch/Cooccurrence_Inv/R_directory/Simulation")
-
 ## 1) Simulating the tables ----
 
+# Number of table to simulate 
 n_ind <- 400
-
-# Register a parallel backend
-registerDoParallel(cores = detectCores())
 
 # 1.1) Mendelian expected frequencies ----
 
@@ -35,190 +28,12 @@ obs <- sample(x = 1:9, size = n_ind, replace = T, prob = expected) # 1:9 represe
 
 obs <- table(obs)
 
-# 1.2.1) Creating a function for generating multiple observed tables ----
-
-table_sim_null <-function(rep, n_cells, n_ind, expected)
-{
-  simulated_m <- foreach(i = 1:rep) %dopar% 
-    {
-      matrix(tabulate(sample(x = 1:n_cells, size = n_ind, replace = T, 
-                             prob = expected)), nrow = 3)
-    }
-  
-  simulated_m <- array(unlist(simulated_m), 
-                       dim = c(nrow(simulated_m[[1]]), ncol(simulated_m[[1]]), 
-                               length(simulated_m)))
-  
-  return(simulated_m)
-}
+# 1.2.1) Using table_sim_null for generating multiple observed tables ----
 
 null_model <- table_sim_null(100000, 9, n_ind, expected)
 
 # 1.2.2) Checking the null hypothesis ----
-
-submatrix_extractor <- function(matrix, row_to_exclude, col_to_exclude)
-{
-  ## Extracting the submatrix of interest
-  submatrix <- matrix[-row_to_exclude, -col_to_exclude]
-  
-  return(submatrix)
-}
-
-two_vectors_from_submatrix <- function(submatrix)
-{
-  ## Getting the two vectors of interest (presence/absebce of a state)
-  
-  total <- sum(submatrix)
-  
-  intersection <- submatrix[2, 2]
-  intersection <- rep(1, intersection)
-  
-  both_absents <- submatrix[1, 1]
-  both_absents <- rep(0, both_absents)
-  
-  only1_present <- submatrix[1, 2]
-  only2_present <- submatrix[2, 1]
-  only1_absent <- total - (length(both_absents) + length(intersection) + 
-                             only1_present)
-  only2_absent <- total - (length(both_absents) + length(intersection) +
-                             only2_present)
-  
-  vector1 <- c(both_absents, intersection, rep(1, only1_present), 
-               rep(0, only1_absent))
-  vector2 <- c(both_absents, intersection, rep(0, only2_absent), 
-               rep(1, only2_present))
-  
-  return(list(vector1, vector2))
-}
-
-p_value_extractor <- function(models, expected)
-{
-  ## Models is an array, where the third dimension represent the model
-  
-  p_values_X2 <- foreach(i = 1:dim(models)[3], .combine = 'c') %dopar% 
-    {
-      chisq.test(models[,,i], p = expected)$p.value
-    }
-  
-  ## Getting the four submatrix of interest
-  
-  ## Submatrix 1: Both heterozygous contrast (exluding the last row and column)
-  
-  sub1 <- foreach(i = 1:dim(models)[3]) %dopar% 
-    {
-      submatrix_extractor(models[,,i], 3, 3)
-    }
-  
-  ## Submatrix 2: Both homozygous contrast (excluding the second row and column)
-  
-  sub2 <- foreach(i = 1:dim(models)[3]) %dopar% 
-    {
-      submatrix_extractor(models[,,i], 2, 2)
-    }
-  
-  ## Submatrix 3 and 4: One homozygous and the other hetwrozygous
-  
-  sub3 <- foreach(i = 1:dim(models)[3]) %dopar% 
-    {
-      submatrix_extractor(models[,,i], 2, 3)
-    }
-  
-  sub4 <- foreach(i = 1:dim(models)[3]) %dopar% 
-    {
-      submatrix_extractor(models[,,i], 3, 2)
-    }
-  
-  ## Getting the two vectors per submatrix (each vector is the presence absence)
-  
-  vectors1 <- foreach(i = 1:dim(models)[3]) %dopar% 
-    {
-      two_vectors_from_submatrix(sub1[[i]])
-    }
-  
-  vectors2 <- foreach(i = 1:dim(models)[3]) %dopar% 
-    {
-      two_vectors_from_submatrix(sub2[[i]])
-    }
-  
-  vectors3 <- foreach(i = 1:dim(models)[3]) %dopar% 
-    {
-      two_vectors_from_submatrix(sub3[[i]])
-    }
-  
-  vectors4 <- foreach(i = 1:dim(models)[3]) %dopar% 
-    {
-      two_vectors_from_submatrix(sub4[[i]])
-    }
-  
-  ## Getting the p-values for the four contrasts (affinity)
-  
-  affinity1 <- foreach(i = 1:dim(models)[3], .combine = 'c') %dopar% 
-    {
-      as.numeric(affinity(matrix(unlist(vectors1[[i]]), nrow = 2, byrow = T), 
-                          row.or.col = 'row', datatype = 'binary', 
-                          pvalType="midP", sigdigit = 3)$all[, 'p_value'])
-    }
-  
-  affinity2 <- foreach(i = 1:dim(models)[3], .combine = 'c') %dopar% 
-    {
-      as.numeric(affinity(matrix(unlist(vectors2[[i]]), nrow = 2, byrow = T), 
-                          row.or.col = 'row', datatype = 'binary', 
-                          pvalType="midP", sigdigit = 3)$all[, 'p_value'])
-    }
-  
-  affinity3 <- foreach(i = 1:dim(models)[3], .combine = 'c') %dopar% 
-    {
-      as.numeric(affinity(matrix(unlist(vectors3[[i]]), nrow = 2, byrow = T), 
-                          row.or.col = 'row', datatype = 'binary', 
-                          pvalType="midP", sigdigit = 3)$all[, 'p_value'])
-    }
-  
-  affinity4 <- foreach(i = 1:dim(models)[3], .combine = 'c') %dopar% 
-    {
-      as.numeric(affinity(matrix(unlist(vectors4[[i]]), nrow = 2, byrow = T), 
-                          row.or.col = 'row', datatype = 'binary', 
-                          pvalType="midP", sigdigit = 3)$all[, 'p_value'])
-    }
-  
-  p_values_affinity <- list(sub1 = affinity1, 
-                            sub2 = affinity2, 
-                            sub3 = affinity3, 
-                            sub4 = affinity4)
-  
-  ## Getting the p-values for the four contrasts (jaccard)
-  
-  jaccard1 <- foreach(i = 1:dim(models)[3], .combine = 'c') %dopar% 
-    {
-      jaccard.test(vectors1[[i]][[1]], vectors1[[i]][[2]], method = "bootstrap",
-              B = 10000, verbose = F)[['pvalue']]
-    }
-  
-  jaccard2 <- foreach(i = 1:dim(models)[3], .combine = 'c') %dopar% 
-    {
-      jaccard.test(vectors2[[i]][[1]], vectors2[[i]][[2]], method = "bootstrap",
-              B = 10000, verbose = F)[['pvalue']]
-    }
-  
-  jaccard3 <- foreach(i = 1:dim(models)[3], .combine = 'c') %dopar% 
-    {
-      jaccard.test(vectors3[[i]][[1]], vectors3[[i]][[2]], method = "bootstrap",
-              B = 10000, verbose = F)[['pvalue']]
-    }
-  
-  jaccard4 <- foreach(i = 1:dim(models)[3], .combine = 'c') %dopar% 
-    {
-      jaccard.test(vectors4[[i]][[1]], vectors4[[i]][[2]], method = "bootstrap",
-              B = 10000, verbose = F)[['pvalue']]
-    }
-  
-  p_values_jaccard <- list(sub1 = jaccard1, 
-                           sub2 = jaccard2, 
-                           sub3 = jaccard3, 
-                           sub4 = jaccard4)
-  
-  return(list(X2 = p_values_X2, affinity = p_values_affinity,
-              jaccard = p_values_jaccard))
-}
+# submatrix_extractor, two_vectors_from_submatrix, and p_value_extractor are used
 
 p_values_null_model <- p_value_extractor(null_model, expected)
 
