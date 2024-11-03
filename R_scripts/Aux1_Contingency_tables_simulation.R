@@ -1,16 +1,18 @@
-## Co_occurrence of inversions in lines of Mimulus guttatus
-#@ Complementary script
-#@ Authors: Luis J. Madrigal-Roca & John K. Kelly
-#@ Date: 2024-05-27
-
-## 1) Loading the required libraries ----
-
-library(foreach)
-library(doParallel)
-library(ggplot2)
-library(CooccurrenceAffinity)
-library(jaccard)
-library(tidyverse)
+##' >>>>>>>>>>>>>>>>>>>>>>>> AUXILIARY SCRIPT 1 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+##' 
+##' @title Are you with me? Co-occurrence tests from community ecology can 
+##' identify positive and negative epistasis between inversions in Mimulus 
+##' guttatus.
+##' 
+##' @description This script will simulate the tables for the contingency tests
+##' and check the null hypothesis for the different tests. The script will also
+##' generate the plots for the p-values associated to the null model and the
+##' models with specific patterns.
+##' 
+##' @author Luis Javier Madrigal-Roca & John K. Kelly
+##' 
+##' @date 2024-11-03
+##' ____________________________________________________________________________
 
 ## 1) Simulating the tables ----
 
@@ -62,7 +64,7 @@ mean_df <- p_df %>%
 
 ## Histograms
 
-pdf("p_values_null_model.pdf", 10, 8)
+pdf("Results/Plots/p_values_null_model.pdf", 10, 8)
 
 p <- ggplot(data = p_df, 
             aes(x = `P-values`, fill = Test)) +
@@ -85,7 +87,7 @@ print(p)
 
 dev.off()
 
-pdf("p_values_null_model_log10.pdf", 10, 8)
+pdf("Results/Plots/p_values_null_model_log10.pdf", 10, 8)
 
 p <- ggplot(data = p_df, 
             aes(x = `P-values`, fill = Test)) +
@@ -119,7 +121,7 @@ cdf_df <- p_df %>%
   mutate(cdf = row_number() / n())
 
 # Create the CDF plot
-pdf("p_values_null_model_cdf_plot.pdf", 10, 8)
+pdf("Results/Plots/p_values_null_model_cdf_plot.pdf", 10, 8)
 
 p <- ggplot(cdf_df, aes(x = `P-values`, y = cdf, color = Test)) +
   geom_line() +
@@ -148,9 +150,6 @@ for (level in unique(p_df$Test))
 {
   ks_res[[level]] <- ks.test(p_df$`P-values`[p_df$Test == level], uniform_ref)
 }
-  
-save.image('Env')
-print('Checkpoint 1')
 
 ## 2) Simulating the tables with a specific pattern ----
 
@@ -159,11 +158,6 @@ print('Checkpoint 1')
 survival <- c(rep(1, 8), 0.2) # 9th cell deflated
 
 survival <- matrix(survival, nrow = 3, ncol = 3)
-
-expected_mod <- function(expected, survival)
-{
-  return(expected * survival / sum(expected * survival))
-}
 
 # 2.2) Simulating the tables the 9th cell deflated ----
 
@@ -201,7 +195,7 @@ mean_df_9_deflated <- p_df_9_deflated %>%
 
 ## Histograms
 
-pdf("p_values_9_deflated_model.pdf", 10, 8)
+pdf("Results/Plots/p_values_9_deflated_model.pdf", 10, 8)
 
 p <- ggplot(data = p_df_9_deflated, 
             aes(x = `P-values`, fill = Test)) +
@@ -227,7 +221,7 @@ dev.off()
 
 # Log transformed histogram
 
-pdf("p_values_9_deflated_model_log10.pdf", 10, 8)
+pdf("Results/Plots/p_values_9_deflated_model_log10.pdf", 10, 8)
 
 p <- ggplot(data = p_df_9_deflated, 
             aes(x = `P-values`, fill = Test)) +
@@ -261,7 +255,7 @@ cdf_df_9_deflated <- p_df_9_deflated %>%
   mutate(cdf = row_number() / n())
 
 # Create the CDF plot
-pdf("p_values_9_deflated_model_cdf_plot.pdf", 10, 8)
+pdf("Results/Plots/p_values_9_deflated_model_cdf_plot.pdf", 10, 8)
 
 p <- ggplot(cdf_df_9_deflated, aes(x = `P-values`, y = cdf, color = Test)) +
   geom_line() +
@@ -282,7 +276,7 @@ dev.off()
 
 # Box-plot for the unstransformed p-values (Zoom-in, 0 - 0.01)
 
-pdf("boxplot_9_deflated_model.pdf", 10, 8)
+pdf("Results/Plots/boxplot_9_deflated_model.pdf", 10, 8)
 
 p <- ggplot(data = p_df_9_deflated,
             aes(x = `P-values`, y = Test, fill = Test)) +
@@ -348,7 +342,7 @@ mean_df_9and8 <- p_df_9and8 %>%
 
 ## Histograms
 
-pdf("p_values_9and8_model.pdf", 10, 8)
+pdf("Results/Plots/p_values_9and8_model.pdf", 10, 8)
 
 p <- ggplot(data = p_df_9and8, 
             aes(x = `P-values`, fill = Test)) +
@@ -374,7 +368,7 @@ dev.off()
 
 # Log transformed histogram
 
-pdf("p_values_9and8_model_log10.pdf", 10, 8)
+pdf("Results/Plots/p_values_9and8_model_log10.pdf", 10, 8)
 
 p <- ggplot(data = p_df_9and8, 
             aes(x = `P-values`, fill = Test)) +
@@ -408,7 +402,7 @@ cdf_df_9and8 <- p_df_9and8 %>%
   mutate(cdf = row_number() / n())
 
 # Create the CDF plot
-pdf("p_values_9and8_model_cdf_plot.pdf", 10, 8)
+pdf("Results/Plots/p_values_9and8_model_cdf_plot.pdf", 10, 8)
 
 p <- ggplot(cdf_df_9and8, aes(x = `P-values`, y = cdf, color = Test)) +
   geom_line() +
@@ -426,5 +420,3 @@ p <- ggplot(cdf_df_9and8, aes(x = `P-values`, y = cdf, color = Test)) +
 print(p)
 
 dev.off()
-
-save.image('Env')

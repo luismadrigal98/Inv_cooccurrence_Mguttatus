@@ -53,3 +53,5 @@ pull_aux_functions("./src")
 ## _____________________________________________________________________________
 
 source("R_scripts/Contingency_tables_simulation.R")
+
+save.image('Env') ## In case you want to inspect the results closely.

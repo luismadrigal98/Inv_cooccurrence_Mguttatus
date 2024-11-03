@@ -1,6 +1,14 @@
 two_vectors_from_submatrix <- function(submatrix)
 {
-  ## Getting the two vectors of interest (presence/absebce of a state)
+  #' This function takes a submatrix and returns two vectors, one for each
+  #' of the two variables in the submatrix.
+  #' 
+  #' @param submatrix A 2x2 matrix with the counts of the four possible
+  #' 
+  #' @return A list with two vectors, one for each of the two variables in the
+  #' sub matrix. The vectors are binary, with 1 indicating presence and 0
+  #' indicating absence.
+  #' ___________________________________________________________________________
   
   total <- sum(submatrix)
   
