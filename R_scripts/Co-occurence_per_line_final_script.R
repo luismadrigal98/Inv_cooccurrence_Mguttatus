@@ -276,6 +276,10 @@ results_x2_df <- lapply(results_x2, function(x)
   do.call(rbind, x)
 })
 
+# Exporting these results to perform analysis in main 4 script
+
+saveRDS(results_x2_df, file = "Results/results_x2_df.rds")
+
 # Extracting the p_values as an square matrix ---
 
 x2p_to_square <- function(x2_result, col_names = c("INV_1", "INV_2"), 
@@ -341,10 +345,14 @@ results_x2_filtered_df <- sapply(X = results_x2_filtered_df,
                                  FUN = p_corrector, var = "p", 
                         simplify = F)
 
+# Getting the number of combinations without dosage
+combos_without_d <- unique(do.call(
+  'rbind', results_x2_filtered_df)$INV_combination)
+
 ## Additional analysis ----
 
 # Expanding the dataframe to decompose each test into individual components
-# This will preserve the omnibus p-value of the X2 test for the four constrast
+# This will preserve the omnibus p-value of the X2 test for the four contrasts
 # derived from the test
 
 contingency_expanded <- function(cont_res_df) 
@@ -547,6 +555,10 @@ for (i in 1: length(names(x2_results_filtered_expanded)))
     dplyr::rename(p_X2_posthoc = p_value,
            p_X2_posthoc_corrected = p_adjusted)
 }
+
+## Getting the number of combinations with dosage
+combos_with_d <- unique(do.call(
+  'rbind', x2_results_filtered_expanded)$INV_combination)
 
 ## *****************************************************************************
 ## 4) Calculation of alternative indexes used in community studies ----
@@ -870,7 +882,6 @@ final_result_stringent_all <- final_result |>
 
 ## Saving the data frame sinto csv files
 
-write.csv(final_result, "Results/final_result_co_occurrence.csv", row.names = FALSE)
 write.csv(final_result_relaxed_any, "Results/final_result_relaxed_any.csv", 
           row.names = FALSE)
 write.csv(final_result_relaxed_all, "Results/final_result_relaxed_all.csv", 
@@ -1126,7 +1137,7 @@ ggplot(data = final_result, aes(x = Jaccard, y = X2_SR)) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
   theme_bw() +
   annotate(geom = 'text', x = -0.0475, y = 3.8, 
-           label = "X2_SR ~ 27.50 * Jaccard - 0.03, df = 4122, p < 2e-16, R^2 = 0.97") +
+           label = "X2_SR ~ 27.53 * Jaccard - 0.03, df = 4122, p < 2e-16, R^2 = 0.98") +
   theme(axis.text = element_text(size = 12, color = 'black'),
         axis.title = element_text(size = 14, color = 'black'),
         legend.text = element_text(size = 12, color = 'black'),
@@ -1144,7 +1155,7 @@ ggplot(data = final_result, aes(x = A_alpha, y = X2_SR)) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
   theme_bw() +
   annotate(geom = 'text', x = -4.25, y = 7, 
-           label = "X2_SR ~ 0.68 * Alpha + 0.03, df = 4122, p < 2e-16, R^2 = 0.31") +
+           label = "X2_SR ~ 0.79 * Alpha + 0.03, df = 4122, p < 2e-16, R^2 = 0.35") +
   theme(axis.text = element_text(size = 12, color = 'black'),
         axis.title = element_text(size = 14, color = 'black'),
         legend.text = element_text(size = 12, color = 'black'),
@@ -1162,7 +1173,7 @@ ggplot(data = final_result, aes(x = A_alpha, y = Jaccard)) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
   theme_bw() +
   annotate(geom = 'text', x = 0, y = 1, 
-           label = "Jaccard ~ 0.02 * Alpha + 0.002, df = 4122, p < 2e-16, R^2 = 0.28") +
+           label = "Jaccard ~ 0.03 * Alpha + 0.002, df = 4122, p < 2e-16, R^2 = 0.32") +
   theme(axis.text = element_text(size = 12, color = 'black'),
         axis.title = element_text(size = 14, color = 'black'),
         legend.text = element_text(size = 12, color = 'black'),
@@ -1194,7 +1205,7 @@ ggplot(data = final_result[!robust_model1$w < 0.15,],
   geom_smooth(method = "rlm", se = FALSE, color = "red") +
   theme_bw() +
   annotate(geom = 'text', x = -0.0475, y = 3.8, 
-           label = "X2_SR ~ 28.12 * Jaccard - 0.02, df = 4122, p < 0.01") +
+           label = "X2_SR ~ 28.09 * Jaccard - 0.02, df = 4122, p < 0.001") +
   theme(axis.text = element_text(size = 12, color = 'black'),
         axis.title = element_text(size = 14, color = 'black'),
         legend.text = element_text(size = 12, color = 'black'),
@@ -1216,7 +1227,7 @@ ggplot(data = final_result[!robust_model2$w < 0.15,],
   geom_smooth(method = "rlm", se = FALSE, color = "red") +
   theme_bw() +
   annotate(geom = 'text', x = -0.0475, y = 3.8, 
-           label = "X2_SR ~ 2.38 * Affinity + 0.01, df = 4122, p < 0.001") +
+           label = "X2_SR ~ 2.45 * Affinity + 0.01, df = 4122, p < 0.01") +
   theme(axis.text = element_text(size = 12, color = 'black'),
         axis.title = element_text(size = 14, color = 'black'),
         legend.text = element_text(size = 12, color = 'black'),
