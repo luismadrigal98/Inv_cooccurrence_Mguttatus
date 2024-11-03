@@ -71,33 +71,6 @@ for(file in list.files('Data/CSVs',
   rm(name)
 }
 
-dosage_splitter <- function(Data, probes_col = 1)
-{
-  Probes <- Data[, probes_col]
-  
-  new_df <- data.frame()
-  
-  for (i in names(Data[, -probes_col]))
-  {
-    old_column <- Data[, i]
-    df <- setNames(data.frame(ifelse(test = old_column == 1, 1, 0),
-                              ifelse(test = old_column == 2, 1, 0)),
-                   c(paste0(i, "_1"), paste0(i, "_2")))
-    
-    if (length(new_df) != 0) 
-    {
-      new_df <- cbind(new_df, df)
-    }
-    
-    else
-    {
-      new_df <- df
-    }
-  }
-  
-  return(cbind(Probes, new_df))
-}
-
 Data_splitted <- lapply(X = Data, FUN = dosage_splitter)
 
 # Create an empty list to store the matrices of presence/absence
@@ -136,7 +109,7 @@ for (object in names(Data))
 
 ## Importing the information related to position and chromosome of the INV
 
-metadata <- read.csv("/home/l338m483/scratch/Cooccurrence_Inv/R_directory/inv_and_gene_metadata.csv", 
+metadata <- read.csv("Data/inv_and_gene_metadata.csv", 
                      header = T)
 
 ## *****************************************************************************
