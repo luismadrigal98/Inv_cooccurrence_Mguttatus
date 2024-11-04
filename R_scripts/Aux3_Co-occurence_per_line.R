@@ -40,27 +40,7 @@ saveRDS(results_x2_df, file = "Results/results_x2_df.rds")
 
 x2_p_square_matrix <- lapply(results_x2_df, x2p_to_square)
 
-## You are here!!! ----
-
 # Filtering the results
-
-contingency_filter <- function(results, metainfo)
-{
-  results <- results |>
-    filter(INV_1 != INV_2) |>
-    mutate(ID1 = sapply(strsplit(INV_1, "_"), `[`, 2),
-           ID2 = sapply(strsplit(INV_2, "_"), `[`, 2)) |>
-    mutate(chrom1 = metainfo[match(ID1, metainfo$INV_ID), "Chr"],
-           chrom2 = metainfo[match(ID2, metainfo$INV_ID), "Chr"]) |>
-    filter(chrom1 != chrom2)
-  
-  results$INV_combination <- apply(results[, c("INV_1", "INV_2")], 1, 
-                                   function(x) paste(sort(x), collapse = ""))
-  
-  results <- results[!duplicated(results$INV_combination), ]
-  
-  return(results)
-}
 
 results_x2_filtered_df <- sapply(X = results_x2_df,
                                  FUN = contingency_filter,
@@ -68,13 +48,6 @@ results_x2_filtered_df <- sapply(X = results_x2_df,
                                  simplify = F)
 
 # Correction of the p-values ----
-
-p_corrector <- function(df, var = "p", method = "BH")
-{
-  df <- df |> mutate(p_corrected = p.adjust(df[, var], method = method))
-  
-  return(df)
-}
 
 results_x2_filtered_df <- sapply(X = results_x2_filtered_df, 
                                  FUN = p_corrector, var = "p", 
@@ -89,45 +62,6 @@ combos_without_d <- unique(do.call(
 # Expanding the dataframe to decompose each test into individual components
 # This will preserve the omnibus p-value of the X2 test for the four contrasts
 # derived from the test
-
-contingency_expanded <- function(cont_res_df) 
-{
-  # Define a helper function
-  
-  process_cols <- function(df, cols, value_name, prefix) {
-    df |>
-      dplyr::select(all_of(c("INV_1", "INV_2", "X2", "p", "p_corrected", "ID1", 
-                      "ID2", "chrom1", 
-                      "chrom2", "INV_combination", cols))) |>
-      pivot_longer(cols = all_of(cols), names_to = "cell_location", 
-                   values_to = value_name) |>
-      mutate(cell_location = gsub(prefix, "", cell_location))
-  }
-  
-  # Define the sets of columns
-  cols_list <- list(
-    dev = list(cols = c("dev_2r_2c", "dev_2r_3c", "dev_3r_2c", "dev_3r_3c"), 
-               value_name = "deviation_value", prefix = "dev_"),
-    sr = list(cols = c("sr_2r_2c", "sr_2r_3c", "sr_3r_2c", "sr_3r_3c"), 
-              value_name = "standardized_residual", prefix = "sr_"),
-    rel_cont = list(cols = c("rel_cont_2r_2c", "rel_cont_2r_3c", 
-                             "rel_cont_3r_2c", "rel_cont_3r_3c"), 
-                    value_name = "relative_contribution", prefix = "rel_cont_")
-  )
-  
-  # Apply the helper function to each set of columns
-  df_list <- lapply(cols_list, function(x) process_cols(cont_res_df, x$cols, 
-                                                        x$value_name, x$prefix))
-  
-  # Merge the data frames together
-  df <- Reduce(function(x, y) merge(x, y, by = c("INV_1", "INV_2", "X2", "p",
-                                                 "p_corrected",
-                                                 "ID1", "ID2", "chrom1", 
-                                                 "chrom2", "INV_combination", 
-                                                 "cell_location")), df_list)
-  
-  return(df)
-}
 
 x2_results_filtered_expanded <- lapply(results_x2_filtered_df, 
                                        contingency_expanded)
@@ -161,49 +95,6 @@ for (i in 1:length(names(x2_results_filtered_expanded))) {
 }
 
 # 3.1) Post-hoc analysis for the X2 test ----
-
-x2_posthoc_calculator <- function(i, j, dosage_matrix, expectation)
-{
-  result <- list()
-  
-  INV1_name <- rownames(dosage_matrix)[i]
-  INV2_name <- rownames(dosage_matrix)[j]
-  
-  observed <- matrix(NA, 3, 3)
-  
-  for (x in 0:2) {
-    for (y in 0:2) {
-      observed[x + 1, y + 1] <- sum(dosage_matrix[i,] == x & 
-                                      dosage_matrix[j,] == y)
-    }
-  }
-  
-  rownames(observed) <- c(paste0(INV1_name, "_0"), paste0(INV1_name, "_1"), 
-                          paste0(INV1_name, "_2"))
-  colnames(observed) <- c(paste0(INV2_name, "_0"), paste0(INV2_name, "_1"), 
-                          paste0(INV2_name, "_2"))
-  
-  res <- chisq.posthoc.test(observed, method = 'none', p = expectation, 
-                            simulate.p.value = T, 
-                            B = 10000)
-  
-  df_melt <- melt(res, id.vars = c("Dimension", "Value"))
-  
-  # Split the data into two data frames
-  df_residuals <- df_melt |> filter(Value == "Residuals") |> 
-    dplyr::rename(Residual = value) |> dplyr::select(-Value)
-  df_pvalues <- df_melt |> filter(Value == "p values") |> 
-    dplyr::rename(p_value = value) |> dplyr::select(-Value)
-  
-  # Join the data frames
-  df_final <- full_join(df_residuals, df_pvalues, 
-                        by = c("Dimension", "variable"))
-  
-  # Rename the columns
-  colnames(df_final) <- c("INV1", "INV2", "Residual", "p_value")
-  
-  return(df_final)
-}
 
 results_posthoc_x2 <- lapply(X = Data_d_l, FUN = function(observed_matrix)
 {
@@ -348,55 +239,6 @@ for (i in 1:length(jaccard_tanimoto_results)) {
 }
 
 ## Extracting the results as a df ---
-
-jaccard_tanimoto_condenser <- function(results, metainfo)
-{
-  df <- data.frame(entity_1 = NA,
-                   Dosage_1 = NA,
-                   ID_1 = NA,
-                   entity_2 = NA,
-                   Dosage_2 = NA,
-                   ID_2 = NA, 
-                   chrom_1 = NA, 
-                   chrom_2 = NA, 
-                   jaccard = NA, 
-                   expectation = NA, 
-                   p_value = NA)
-  
-  ref <- which(! is.na(results[[2]]), arr.ind = T)
-  
-  for (i in 1:nrow(ref))
-  {
-    row_i <- ref[i, 1]
-    col_i <- ref[i, 2]
-    
-    INV_1 <- rownames(results[[1]])[row_i]
-    Dosage_1 <- strsplit(INV_1, "_")[[1]][3]
-    ID_1 <- strsplit(INV_1, "_")[[1]][2]
-    
-    INV_2 <- colnames(results[[1]])[col_i]
-    Dosage_2 <- strsplit(INV_2, "_")[[1]][3]
-    ID_2 <- strsplit(INV_2, "_")[[1]][2]
-    
-    new_obs <- data.frame(entity_1 = INV_1,
-                          Dosage_1 = Dosage_1,
-                          ID_1 = ID_1,
-                          entity_2 = INV_2,
-                          Dosage_2 = Dosage_2,
-                          ID_2 = ID_2,
-                          chrom_1 = metainfo[metainfo$INV_ID == ID_1, 'Chr'], 
-                          chrom_2 = metainfo[metainfo$INV_ID == ID_2, 'Chr'], 
-                          jaccard = results[['statistics']][row_i, col_i], 
-                          expectation = results[['expectation']][row_i, col_i], 
-                          p_value = results[['pvalues']][row_i, col_i])
-    
-    df <- rbind2(df, new_obs)
-  }
-  
-  df = df[-1, ]
-  
-  return(df)
-}
 
 jaccard_tanimoto_results_df <- sapply(X = jaccard_tanimoto_results,
                                       FUN = jaccard_tanimoto_condenser,
@@ -1398,42 +1240,24 @@ plot_network_lite(networks_29_32_40,
 
 # Heterogeneity analysis ----
 
-# Defining valid contrasts between the inversion (without considering dosage levels)
+# Analysis for non-dosage levels
+mask1 <- c("Inv_29", "Inv_32", "Inv_40")
+G_replicated_omnibus <- perform_heterogeneity_analysis(
+  mask = mask1,
+  data = Data_d_l,
+  metadata = metadata,
+  degrees_of_freedom = 4
+)
 
-# Defining valid contrasts between the inversion (considering dosage levels)
-
-mask <- c("Inv_29_1", "Inv_29_2", "Inv_32_1", "Inv_32_2", 
-          "Inv_40_1", "Inv_40_2")
-
-Data_p_a_subset <- lapply(Data_p_a, function(x) {
-  x[mask,]
-})
-
-# Generate all possible pairs
-grid <- expand.grid(mask, mask)
-
-# Filter out redundant pairs
-unique_pairs <- grid[grid$Var1 != grid$Var2, ]
-unique_pairs <- unique_pairs[!duplicated(t(apply(unique_pairs, 1, sort))), ]
-
-names(unique_pairs) <- c("Inv_1", "Inv_2")
-
-unique_pairs <- unique_pairs |>
-  mutate(valid = mapply(is.valid, as.character(Inv_1), as.character(Inv_2),
-                        MoreArgs = list(metadata = metadata,
-                                        fields = c(1, 3)),
-                        SIMPLIFY = TRUE)) |>
-  dplyr::filter(valid) |>
-  dplyr::select(-valid)
-
-# Applying the function to get G values per contrast per line
-
-G_replicated <- G_per_contrast_per_line(unique_pairs, Data_p_a_subset) |>
-  mutate(Inv_1 = as.character(Inv_1),
-         Inv_2 = as.character(Inv_2))
-
-G_replicated <- replicated_G_test(G_replicated, degrees_of_fred_replicates = 1,
-                                  Data_p_a = Data_p_a_subset)
+# Analysis for dosage levels
+mask2 <- c("Inv_29_1", "Inv_29_2", "Inv_32_1", "Inv_32_2", 
+           "Inv_40_1", "Inv_40_2")
+G_replicated <- perform_heterogeneity_analysis(
+  mask = mask2,
+  data = Data_p_a,
+  metadata = metadata,
+  degrees_of_freedom = 1
+)
 
 # 9) Network analysis ----
 

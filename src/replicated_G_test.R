@@ -1,5 +1,5 @@
 replicated_G_test <- function(df_replicates, degrees_of_fred_replicates,
-                              Data_p_a, correction = "williams")
+                              Data, correction = "williams")
 {
   #' This function will perform a replicated independence G-test for the
   #' contingency table of the replicates. The function will return the
@@ -13,7 +13,8 @@ replicated_G_test <- function(df_replicates, degrees_of_fred_replicates,
   #' 
   #' @param degrees_of_fred_replicates degrees of freedom for each individual test.
   #' 
-  #' @param Data_p_a A list with the matrices of presence/absence for each inversion.
+  #' @param Data A list with the matrices of presence/absence for each inversion
+  #' or the dosage level of each inversion.
   #' 
   #' @param correction A character string with the name of the correction to be
   #' applied. The options are "williams", "yates", and "none". Default is "williams".
@@ -49,10 +50,10 @@ replicated_G_test <- function(df_replicates, degrees_of_fred_replicates,
     pooled_vector_1 <- vector(length = 0, mode = "numeric")
     pooled_vector_2 <- vector(length = 0, mode = "numeric")
     
-    for (line in names(Data_p_a))
+    for (line in names(Data))
     {
-      pooled_vector_1 <- c(pooled_vector_1, Data_p_a[[line]][inv1, ])
-      pooled_vector_2 <- c(pooled_vector_2, Data_p_a[[line]][inv2, ])
+      pooled_vector_1 <- c(pooled_vector_1, Data[[line]][inv1, ])
+      pooled_vector_2 <- c(pooled_vector_2, Data[[line]][inv2, ])
     }
     
     pooled_table <- table(pooled_vector_1, pooled_vector_2)
