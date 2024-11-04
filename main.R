@@ -112,6 +112,23 @@ for (object in names(Data))
 metadata <- read.csv("Data/inv_and_gene_metadata.csv", 
                      header = T)
 
+# 3.1) Checking the data ----
+
+## Additional checking step for compliance in the marginals.
+## If there is an inversion with a dosage level of 0, it will be removed.
+## Its effect will be captured in the individual effect on survival analysis
+
+# Searching for problematic in the data
+
+problematic_pairs <- lapply(Data_d_l, marginal_compliance_checking)
+
+print(problematic_pairs)
+
+#' There is a particularly interesting case in the data. Inv_49, in the line 
+#' 444 does not exhibit the homozygous state for the inversion (dosage 2). It is
+#' pertinent then to exclude that inversion from posterior analysis related to
+#' co-occurrence to avoid problems with marginals 0.
+
 ## *****************************************************************************
 ## 4) Simulation analysis ----
 ## _____________________________________________________________________________
@@ -123,5 +140,11 @@ source("R_scripts/Aux1_Contingency_tables_simulation.R")
 ## _____________________________________________________________________________
 
 source("R_scripts/Aux2_Segregation_distortion_analysis.R")
+
+## *****************************************************************************
+## 6) Co-occurrence analysis ----
+## _____________________________________________________________________________
+
+source("R_scripts/Aux3_Co_occurrence_per_line.R")
 
 save.image('Env') ## In case you want to inspect the results closely.

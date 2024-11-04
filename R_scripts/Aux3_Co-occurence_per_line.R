@@ -3,57 +3,6 @@
 #@ Authors: Luis J. Madrigal-Roca & John K. Kelly
 #@ Date: 2024-05-27
 
-
-## Importing the name of the genes contained in each inversion
-
-## Additional checking step for compliance in the marginals.
-## If there is an inversion with a dosage level of 0, it will be removed.
-## Its effect will be captured in the individual effect on survival analysis
-
-# Searching for problematic in the data
-
-# Function to check for zero marginals in the contingency table
-check_zero_marginals <- function(data, row_index, col_index) {
-  row_name <- rownames(data)[row_index]
-  col_name <- rownames(data)[col_index]
-
-  observed <- matrix(NA, 3, 3)
-
-  for (x in 0:2) {
-    for (y in 0:2) {
-      observed[x + 1, y + 1] <- sum(data[row_index, ] == x & data[col_index, ] == y)
-    }
-  }
-
-  # Check for zero marginals
-  if (any(rowSums(observed) == 0) || any(colSums(observed) == 0)) {
-    return(list(row_name = row_name, col_name = col_name, observed = observed))
-  } else {
-    return(NULL)
-  }
-}
-
-marginal_compliance_checking <- function(data) {
-  problematic_pairs <- list()
-  for (i in 1:(nrow(data) - 1)) {
-    for (j in (i + 1):nrow(data)) {
-      result <- check_zero_marginals(data, i, j)
-      if (!is.null(result)) {
-        problematic_pairs <- append(problematic_pairs, list(result))
-      }
-    }
-  }
-
-  return(problematic_pairs)
-}
-
-problematic_pairs <- lapply(Data_d_l, marginal_compliance_checking)
-
-#' There is a particularly interesting case in the data. Inv_49, in the line 
-#' 444 does not exhibit the homozygous state for the inversion (dosage 2). It is
-#' pertinent then to exclude that inversion from posterior analysis to avoid 
-#' problems with marginals 0.
-
 ## *****************************************************************************
 ## 3) Chi-square test for independence of inversions ----
 ## _____________________________________________________________________________
@@ -64,75 +13,6 @@ expec_freq <- matrix(data = c(1/16, 2/16, 1/16, 2/16, 4/16, 2/16,
                                      c('0', '1', '2')))
 
 # 3.2) X2 square test ----
-
-x2_calculator <- function(i, j, dosage_matrix)
-{
-  #' This function calculates the X2 test for independence between two inversions
-  #' in the dataset. The function will return a dataframe with the results of the
-  #' test.
-  #' 
-  #' @param i The row index of the first inversion
-  #' @param j The row index of the second inversion
-  #' @param dosage_matrix The matrix containing the dosage levels of the inversions
-  #' 
-  #' @return A dataframe with the results of the X2 test
-  #' 
-  #' @note In some instances, the result test will not have some of the elements.
-  #' This happen because for INV_49, there is one dosage level that is not present,
-  #' and this result in a contingency analysis of a 2x3 table. This is not a problem
-  #' for the X2 test, but it is for the post-hoc analysis. We will preserve the
-  #' structure of the output, but for those missing elements, the values will be
-  #' NA's.
-  #' ___________________________________________________________________________
-  
-  INV1_name <- rownames(dosage_matrix)[i]
-  INV2_name <- rownames(dosage_matrix)[j]
-  
-  observed <- table(dosage_matrix[i,], dosage_matrix[j,])
-  
-  test <- chisq.test(x = observed, simulate.p.value = T,
-                     B = 10000)
-  
-  x2 <- test$statistic
-  p_value <- test$p.value
-  dev <- test$observed - test$expected
-  standardized_residuals <- dev / sqrt(test$expected)
-  relative_contribution <- (dev^2 / (test$expected * x2)) * 100
-  
-  return(data.frame(INV_1 = INV1_name,
-                    INV_2 = INV2_name,
-                    X2 = x2,
-                    p = p_value,
-                    dev_1r_1c = dev[1, 1],
-                    dev_2r_1c = dev[2, 1],
-                    dev_3r_1c = if(nrow(dev) == 3) dev[3, 1] else NA,
-                    dev_1r_2c = dev[1, 2],
-                    dev_2r_2c = dev[2, 2],
-                    dev_3r_2c = if(nrow(dev) == 3) dev[3, 2] else NA,
-                    dev_1r_3c = if(ncol(dev) == 3) dev[1, 3] else NA,
-                    dev_2r_3c = if(ncol(dev) == 3) dev[2, 3] else NA,
-                    dev_3r_3c = if(ncol(dev) == 3 & nrow(dev) == 3) dev[3, 3] else NA,
-                    sr_1r_1c = standardized_residuals[1, 1],
-                    sr_2r_1c = standardized_residuals[2, 1],
-                    sr_3r_1c = if(nrow(standardized_residuals) == 3) standardized_residuals[3, 1] else NA,
-                    sr_1r_2c = standardized_residuals[1, 2],
-                    sr_2r_2c = standardized_residuals[2, 2],
-                    sr_3r_2c = if(nrow(standardized_residuals) == 3) standardized_residuals[3, 2] else NA,
-                    sr_1r_3c = if(ncol(standardized_residuals) == 3) standardized_residuals[1, 3] else NA,
-                    sr_2r_3c = if(ncol(standardized_residuals) == 3) standardized_residuals[2, 3] else NA,
-                    sr_3r_3c = if (ncol(standardized_residuals) == 3 & 
-                                   nrow(standardized_residuals) == 3) standardized_residuals[3, 3] else NA,
-                    rel_cont_1r_1c = relative_contribution[1, 1],
-                    rel_cont_2r_1c = relative_contribution[2, 1],
-                    rel_cont_3r_1c = if(nrow(relative_contribution) == 3) relative_contribution[3, 1] else NA,
-                    rel_cont_1r_2c = relative_contribution[1, 2],
-                    rel_cont_2r_2c = relative_contribution[2, 2],
-                    rel_cont_3r_2c = if(nrow(relative_contribution) == 3) relative_contribution[3, 2] else NA,
-                    rel_cont_1r_3c = if(ncol(relative_contribution) == 3) relative_contribution[1, 3] else NA,
-                    rel_cont_2r_3c = if(ncol(relative_contribution) == 3) relative_contribution[2, 3] else NA,
-                    rel_cont_3r_3c = if(ncol(relative_contribution) == 3 &
-                                        nrow(relative_contribution) == 3) relative_contribution[3, 3] else NA))
-}
 
 results_x2 <- lapply(X = Data_d_l, FUN = function(observed_matrix)
 {
@@ -152,36 +32,15 @@ results_x2_df <- lapply(results_x2, function(x)
   do.call(rbind, x)
 })
 
-# Exporting these results to perform analysis in main 4 script
+# Exporting these results to perform analysis in Aux script 4
 
 saveRDS(results_x2_df, file = "Results/results_x2_df.rds")
 
 # Extracting the p_values as an square matrix ---
 
-x2p_to_square <- function(x2_result, col_names = c("INV_1", "INV_2"), 
-                          p_col = 'p') 
-{
-  x2_result <- as.data.frame(x2_result)
-  
-  unique_values <- unique(c(x2_result[, col_names[1]], 
-                            x2_result[, col_names[2]]))
-  
-  p_values <- matrix(nrow = length(unique_values), 
-                     ncol = length(unique_values))
-  
-  rownames(p_values) <- colnames(p_values) <- unique_values
-  
-  for (i in unique_values) {
-    for (j in unique_values) {
-      p_values[i, j] <- x2_result[x2_result[, col_names[1]] == i & 
-                                    x2_result[, col_names[2]] == j , p_col]
-    }
-  }
-  
-  return(p_values)
-}
-
 x2_p_square_matrix <- lapply(results_x2_df, x2p_to_square)
+
+## You are here!!! ----
 
 # Filtering the results
 
@@ -1536,6 +1395,45 @@ names(networks_29_32_40) <- c("SUB_L_1034", "SUB_L_1192", "SUB_L_155",
 plot_network_lite(networks_29_32_40, 
              edge_breaks = c(0.001, 0.008, 0.03, 0.05, 0.07, 0.10),
              range = c(1, 10))
+
+# Heterogeneity analysis ----
+
+# Defining valid contrasts between the inversion (without considering dosage levels)
+
+# Defining valid contrasts between the inversion (considering dosage levels)
+
+mask <- c("Inv_29_1", "Inv_29_2", "Inv_32_1", "Inv_32_2", 
+          "Inv_40_1", "Inv_40_2")
+
+Data_p_a_subset <- lapply(Data_p_a, function(x) {
+  x[mask,]
+})
+
+# Generate all possible pairs
+grid <- expand.grid(mask, mask)
+
+# Filter out redundant pairs
+unique_pairs <- grid[grid$Var1 != grid$Var2, ]
+unique_pairs <- unique_pairs[!duplicated(t(apply(unique_pairs, 1, sort))), ]
+
+names(unique_pairs) <- c("Inv_1", "Inv_2")
+
+unique_pairs <- unique_pairs |>
+  mutate(valid = mapply(is.valid, as.character(Inv_1), as.character(Inv_2),
+                        MoreArgs = list(metadata = metadata,
+                                        fields = c(1, 3)),
+                        SIMPLIFY = TRUE)) |>
+  dplyr::filter(valid) |>
+  dplyr::select(-valid)
+
+# Applying the function to get G values per contrast per line
+
+G_replicated <- G_per_contrast_per_line(unique_pairs, Data_p_a_subset) |>
+  mutate(Inv_1 = as.character(Inv_1),
+         Inv_2 = as.character(Inv_2))
+
+G_replicated <- replicated_G_test(G_replicated, degrees_of_fred_replicates = 1,
+                                  Data_p_a = Data_p_a_subset)
 
 # 9) Network analysis ----
 
