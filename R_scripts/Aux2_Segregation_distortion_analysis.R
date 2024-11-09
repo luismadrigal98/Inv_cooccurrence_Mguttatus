@@ -114,21 +114,21 @@ observed_counts_deviants$Selection <-
 #' p-value.
 
 significant_inv <- significant_inv |>
-  mutate(SDV = -log(p_value))
+  mutate(SDV = -log10(p_value))
 
 #' Adding the distortion segregation value to the dataframe with all inversions
 
 goodness_of_fit_df <- goodness_of_fit_df |>
- mutate(SDV = -log(p_value))
+ mutate(SDV = -log10(p_value))
 
 # Exporting the results
 
 write.csv(goodness_of_fit_df, 
-          file = "./Results/goodness_of_fit_individual_effect.csv",
+          file = "Results/goodness_of_fit_individual_effect.csv",
           row.names = F)
 
 write.csv(significant_inv, 
-          file = "./Results/significant_inv_individual_effect.csv",
+          file = "Results/significant_inv_individual_effect.csv",
           row.names = F)
 
 ##' <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< End >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

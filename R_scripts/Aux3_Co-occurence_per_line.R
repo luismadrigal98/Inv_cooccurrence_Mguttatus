@@ -283,34 +283,6 @@ for (i in 1:length(results_affinity))
 
 # Extracting the affinity values from the output as a matrix for plotting
 
-alpha_values_extractor <- function(affinity_results) {
-  
-  df <- affinity_results$all
-  inv_ID <- names(affinity_results$occur_mat)
-  
-  A_matrix <- matrix(nrow = length(inv_ID), ncol = length(inv_ID))
-  
-  dimnames(A_matrix) <- list(inv_ID, inv_ID)
-  
-  for (i in inv_ID) {
-    for(j in inv_ID) {
-      if(i == j) {
-        A_matrix[i, j] <- 1 # Maximum value (given the capped behavior of affinity calculator)
-      } else if (substr(i, 1, nchar(i) - 2) == substr(j, 1, nchar(j) - 2)) {
-        A_matrix[i, j] <- 1 # A plant cannot be both homozygous and heterozygous at the same time
-      } else {
-        alpha_p <- df[df[, "entity_1"] == i & df[, "entity_2"] == j, "p_value"]
-        if (length(alpha_p) == 0) {
-          alpha_p <- df[df[, "entity_1"] == j & df[, "entity_2"] == i, "p_value"]
-        }
-        A_matrix[i, j] <- ifelse(length(alpha_p) == 0, NA, alpha_p)
-      }
-    }
-  }
-  
-  return(A_matrix)
-}
-
 A_matrices <- lapply(results_affinity, alpha_values_extractor)
 
 for (i in 1:length(names(A_matrices))) {
@@ -320,44 +292,6 @@ for (i in 1:length(names(A_matrices))) {
   rm(i)
   rm(new_name)
   rm(old_name)
-}
-
-affinity_filter <- function(affinity_res, metadata, filter_LG = T, 
-                            filter_CS = T)
-{
-  # filter_LG: Removes entries that belongs to the same chromosome
-  # filter_CS: Removes entries from the same inversion with mutually exclusive
-  #states
-  
-  df <- affinity_res$all
-  
-  df <- df |> separate(col = entity_1, into = c("Generic_name_1", "INV_ID_1", 
-                                                "State_1"), sep = '_', 
-                       remove = F) |>
-    separate(col = entity_2, into = c("Generic_name_2", "INV_ID_2", 
-                                      "State_2"), sep = '_', 
-             remove = F) |>
-    dplyr::select(-Generic_name_1, -State_1, -Generic_name_2, -State_2)
-  
-  df <- df |> 
-    left_join(metadata |> dplyr::select(INV_ID, Chr), by = c("INV_ID_1" = "INV_ID")) |> 
-    rename(chrom1 = Chr)
-  
-  df <- df |> 
-    left_join(metadata |> dplyr::select(INV_ID, Chr), by = c("INV_ID_2" = "INV_ID")) |> 
-    rename(chrom2 = Chr)
-  
-  if (filter_LG == T)
-  {
-    df <- df |> filter(chrom1 != chrom2)
-  }
-  
-  if (filter_CS == T)
-  {
-    df <- df |> filter(INV_ID_1 != INV_ID_2)
-  }
-  
-  return(df)
 }
 
 results_affinity_filtered <- sapply(X = results_affinity,
@@ -474,7 +408,7 @@ write.csv(final_result_stringent_all, "Results/final_result_stringent_all.csv",
 
 for (i in names(x2_p_square_matrix)) 
 {
-  pdf(file = paste0("Plots/", i, "_omnibus_X2_support_heatmap.pdf"), width = 6, 
+  pdf(file = paste0("Results/Plots/", i, "_omnibus_X2_support_heatmap.pdf"), width = 6, 
       height = 6)
   
   logical_matrix <- x2_p_square_matrix[[i]] < 0.05
@@ -500,33 +434,6 @@ for (i in names(x2_p_square_matrix))
 
 # 6.2) Evidence according to X2_posthoc, Jaccard, and Affinity ----
 
-support_counter <- function(supp_X2_posthoc,
-                            supp_Affinity,
-                            supp_Jaccard)
-{
-  # Remove rows and columns with NA values
-  row_na <- apply(supp_X2_posthoc, 1, function(x) any(!is.na(x)))
-  col_na <- apply(supp_X2_posthoc, 2, function(x) any(!is.na(x)))
-  supp_X2_posthoc <- supp_X2_posthoc[row_na, col_na]
-  
-  names <- list(rownames(supp_X2_posthoc), colnames(supp_X2_posthoc))
-  
-  supp_X2_posthoc <- matrix(as.numeric(supp_X2_posthoc < 0.05), 
-                            nrow = nrow(supp_X2_posthoc), 
-                            ncol = ncol(supp_X2_posthoc))
-  supp_Affinity <- matrix(as.numeric(supp_Affinity < 0.05), 
-                          nrow = nrow(supp_Affinity), 
-                          ncol = ncol(supp_Affinity))
-  supp_Jaccard <- matrix(as.numeric(supp_Jaccard < 0.05), 
-                         nrow = nrow(supp_Jaccard), 
-                         ncol = ncol(supp_Jaccard))
-  
-  concensus <- supp_X2_posthoc + supp_Affinity + supp_Jaccard
-  dimnames(concensus) <- names
-  
-  return(concensus)
-}
-
 support_matrix <- mapply(support_counter, 
                          supp_X2_posthoc = x2_p_post_hoc_square_matrix,
                          supp_Affinity = A_matrices,
@@ -535,7 +442,7 @@ support_matrix <- mapply(support_counter,
 
 for (i in names(support_matrix)) 
 {
-  pdf(file = paste0("Plots/", i, "_concensus_support_heatmap.pdf"), width = 7, 
+  pdf(file = paste0("Results/Plots/", i, "_concensus_support_heatmap.pdf"), width = 7, 
       height = 7)
   
   count_matrix <- support_matrix[[i]]
@@ -554,32 +461,6 @@ for (i in names(support_matrix))
 }
 
 ## 6.3) Detecting Linkage Groups ----
-
-# Helper function for making NA the p_values associated to inversion pairs in
-# different chromosomes (masking the p-values)
-
-mask_chromosomes <- function(p_matrix, metadata)
-{
-  row_names <-  rownames(p_matrix)
-  row_names <- as.character(sapply(strsplit(row_names, "_"), `[`, 2))
-  
-  col_names <- colnames(p_matrix)
-  col_names <- as.character(sapply(strsplit(col_names, "_"), `[`, 2))
-  
-  for (i in 1:length(row_names))
-  {
-    for (j in 1:length(col_names))
-    {
-      if (metadata[metadata$INV_ID == row_names[i], "Chr"] != 
-          metadata[metadata$INV_ID == col_names[j], "Chr"])
-      {
-        p_matrix[i, j] <- NA
-      }
-    }
-  }
-  
-  return(p_matrix)
-}
 
 # Masking the p_values of contrast in different chromosomes
 
@@ -602,7 +483,7 @@ x2_p_post_hoc_square_matrix_masked <- lapply(x2_p_post_hoc_square_matrix,
 
 for (i in names(x2_p_square_matrix_masked)) 
 {
-  pdf(file = paste0("Plots/", i, "_omnibus_X2_linkage_heatmap.pdf"), width = 6, 
+  pdf(file = paste0("Results/Plots/", i, "_omnibus_X2_linkage_heatmap.pdf"), width = 6, 
       height = 6)
   
   logical_matrix <- x2_p_square_matrix_masked[[i]] < 0.05
@@ -663,7 +544,7 @@ for (i in names(support_matrix_LG)) {
 
 for (i in names(support_matrix_LG)) 
 {
-  pdf(file = paste0("Plots/", i, "_concensus_linkage_heatmap.pdf"), width = 7, 
+  pdf(file = paste0("Results/Plots/", i, "_concensus_linkage_heatmap.pdf"), width = 7, 
       height = 7)
   
   count_matrix <- support_matrix_LG[[i]]
@@ -707,7 +588,7 @@ model3 <- lm(Jaccard ~ A_alpha, data = final_result)
 
 # 7.5.1) Model 1 ----
 
-pdf(file = "Plots/Linear_models_X2_SR_Jaccard.pdf", width = 8, height = 6)
+pdf(file = "Results/Plots/Linear_models_X2_SR_Jaccard.pdf", width = 8, height = 6)
 
 ggplot(data = final_result, aes(x = Jaccard, y = X2_SR)) +
   geom_point() +
@@ -725,7 +606,7 @@ dev.off()
 
 # 7.5.2) Model 2 ----
 
-pdf(file = "Plots/Linear_models_X2_SR_Affinity.pdf", width = 8, height = 6)
+pdf(file = "Results/Plots/Linear_models_X2_SR_Affinity.pdf", width = 8, height = 6)
 
 ggplot(data = final_result, aes(x = A_alpha, y = X2_SR)) +
   geom_point() +
@@ -743,7 +624,7 @@ dev.off()
 
 # 7.5.3) Model 3 ----
 
-pdf(file = "Plots/Linear_models_Jaccard_Affinity.pdf", width = 8, height = 6)
+pdf(file = "Results/Plots/Linear_models_Jaccard_Affinity.pdf", width = 8, height = 6)
 
 ggplot(data = final_result, aes(x = A_alpha, y = Jaccard)) +
   geom_point() +
@@ -773,7 +654,7 @@ lillie.test(model3$residuals)
 # Robust model
 robust_model1 <- rlm(X2_SR ~ Jaccard, data = final_result)
 
-pdf(file = "Plots/Robust_Linear_models_X2_SR_Jaccard.pdf", width = 8, 
+pdf(file = "Results/Plots/Robust_Linear_models_X2_SR_Jaccard.pdf", width = 8, 
     height = 6)
 
 ggplot(data = final_result[!robust_model1$w < 0.15,], 
@@ -795,7 +676,7 @@ dev.off()
 # Robust model
 robust_model2 <- rlm(X2_SR ~ A_alpha, data = final_result)
 
-pdf(file = "Plots/Robust_Linear_models_X2_SR_Affinity.pdf", width = 8, 
+pdf(file = "Results/Plots/Robust_Linear_models_X2_SR_Affinity.pdf", width = 8, 
     height = 6)
 
 ggplot(data = final_result[!robust_model2$w < 0.15,], 
@@ -817,7 +698,7 @@ dev.off()
 # Robust model
 robust_model3 <- rlm(Jaccard ~ A_alpha, data = final_result)
 
-pdf(file = "Plots/Robust_Linear_models_Jaccard_Affinity.pdf", width = 8, 
+pdf(file = "Results/Plots/Robust_Linear_models_Jaccard_Affinity.pdf", width = 8, 
     height = 6)
 
 ggplot(data = final_result[!robust_model3$w < 0.15,], 
@@ -858,191 +739,6 @@ nodes <- sapply(nodes, function(x) {
 
 nodes <- as.vector(unlist(nodes))
 
-sig_network_builder <- function(nodes, meta_nodes, edges, type = "both",
-                                co_occ_color = "blue",
-                                rep_color = "red",
-                                non_sig_color = "grey")
-{
-  # Create the nodes
-  nodes <- data.frame(name = nodes)
-  nodes$chromosome <- meta_nodes[, 'Chr'][match(
-    sapply(strsplit(nodes$name, "_"), `[`, 2), meta_nodes$INV_ID)]
-  
-  nodes$name <- sapply(nodes$name, function(x) {
-    paste0(strsplit(x, "_")[[1]][2], "_", strsplit(x, "_")[[1]][3])
-  })
-  
-  # Initialize edges_net as NULL
-  edges_net <- NULL
-  
-  # Change the names of the inversions
-  
-  edges$INV_1 <- sapply(edges$INV_1, function(x) {
-    paste0(strsplit(x, "_")[[1]][2], "_", strsplit(x, "_")[[1]][3])
-  })
-  
-  edges$INV_2 <- sapply(edges$INV_2, function(x) {
-    paste0(strsplit(x, "_")[[1]][2], "_", strsplit(x, "_")[[1]][3])
-  })
-  
-  # Create the edges
-  edges <- edges %>% 
-    rowwise() %>% 
-    mutate(color = ifelse(p_X2_global > 0.05 & J_p > 0.05, 
-                          non_sig_color, 
-                          ifelse(all(Jaccard > 0, J_p < 0.05), 
-                                 co_occ_color, 
-                                 ifelse(all(Jaccard < 0, J_p < 0.05), 
-                                        rep_color,
-                                        ifelse(all(Jaccard > 0, J_p > 0.05), 
-                                               "yellow", 
-                                               "#5E4FA2")))))
-  
-  edges_net <- data.frame(from = edges$INV_1, 
-                          to = edges$INV_2, 
-                          weight = edges$Jaccard, 
-                          color = edges$color,
-                          color.order = factor(edges$color, 
-                                               levels = c(non_sig_color,
-                                                          co_occ_color, 
-                                                          rep_color
-                                                          )))
-  
-  edges_net$weight <- abs(edges_net$weight) + 0.0001
-  
-  edges_net <- edges_net |> mutate(color2 = ifelse(color == co_occ_color, 
-                                                   co_occ_color, NA),
-                                   color3 = ifelse(color == rep_color, 
-                                                   rep_color, NA),
-                                   color4 = ifelse(color == "yellow", 
-                                                   "yellow", NA),
-                                   color5 = ifelse(color == "#5E4FA2", 
-                                                   "#5E4FA2", NA),
-                                   color1 = ifelse(color == non_sig_color, 
-                                                   non_sig_color, NA))
-  
-  # Create a graph object
-  network_global <- graph_from_data_frame(d = edges_net, 
-                                                     vertices = nodes, 
-                                                     directed = FALSE)
-  
-  # Add the color attribute to the edges
-  E(network_global)$color <- edges_net$color
-  
-  # Simplify the graph to remove loops
-  network_simplified_global <- igraph::simplify(network_global, 
-                                                remove.loops = T, 
-                                         edge.attr.comb = "first")
-  
-  # Calculate network metrics
-  V(network_simplified_global)$community <- 
-    cluster_fast_greedy(network_simplified_global)$membership
-  V(network_simplified_global)$degree <- 
-    degree(network_simplified_global, mode = "all")
-  V(network_simplified_global)$closeness <- 
-    closeness(network_simplified_global)
-  V(network_simplified_global)$betweenness <- 
-    betweenness(network_simplified_global)
-  V(network_simplified_global)$eigenvector <- 
-    eigen_centrality(network_simplified_global)$vector
-  
-  # Auxiliar for masking nodes that does not exist in a particular line
-  
-  chrom_number <- length(unique(V(network_simplified_global)$chromosome))
-  
-  palette <- hcl.colors(14, "Set3", rev = TRUE)
-  palette <- setNames(palette, unique(V(network_simplified_global)$chromosome))
-  
-  V(network_simplified_global)$chrom_color1 <- 
-    palette[V(network_simplified_global)$chromosome]
-  V(network_simplified_global)$chrom_color1[
-    V(network_simplified_global)$degree == 0] <- NA
-  
-  # Auxiliar for masking node labels that does not exist in a particular line
-  V(network_simplified_global)$name[
-    V(network_simplified_global)$degree == 0] <- ""
-  
-  # Convert to a tidygraph object
-  tidy_network_global <- as_tbl_graph(network_simplified_global, 
-                               directed = F)
-  
-  return(tidy_network_global)
-}
-
-sig_network_builder_lite <- function(nodes, meta_nodes, edges, type = "both",
-                                co_occ_color = "blue",
-                                rep_color = "red")
-{
-  # Create the nodes
-  nodes <- data.frame(name = nodes)
-  nodes$chromosome <- meta_nodes[, 'Chr'][match(
-    sapply(strsplit(nodes$name, "_"), `[`, 2), meta_nodes$INV_ID)]
-  
-  nodes$name <- sapply(nodes$name, function(x) {
-    paste0(strsplit(x, "_")[[1]][2], "_", strsplit(x, "_")[[1]][3])
-  })
-  
-  # Initialize edges_net as NULL
-  edges_net <- NULL
-  
-  # Change the names of the inversions
-  
-  edges$INV_1 <- sapply(edges$INV_1, function(x) {
-    paste0(strsplit(x, "_")[[1]][2], "_", strsplit(x, "_")[[1]][3])
-  })
-  
-  edges$INV_2 <- sapply(edges$INV_2, function(x) {
-    paste0(strsplit(x, "_")[[1]][2], "_", strsplit(x, "_")[[1]][3])
-  })
-  
-  # Create the edges
-  edges <- edges %>% 
-    rowwise() %>% 
-    mutate(color = ifelse(Jaccard < 0, rep_color, co_occ_color))
-  
-  edges_net <- data.frame(from = edges$INV_1, 
-                          to = edges$INV_2, 
-                          weight = edges$Jaccard, 
-                          color = edges$color)
-  
-  edges_net$weight <- abs(edges_net$weight) + 0.0001
-  
-  # Create a graph object
-  network_global <- graph_from_data_frame(d = edges_net, 
-                                          vertices = nodes, 
-                                          directed = FALSE)
-  
-  # Add the color attribute to the edges
-  E(network_global)$color <- edges_net$color
-  
-  # Simplify the graph to remove loops
-  network_simplified_global <- igraph::simplify(network_global, 
-                                                remove.loops = T, 
-                                                edge.attr.comb = "first")
-  
-  # Calculate network metrics
-  V(network_simplified_global)$degree <- 
-    degree(network_simplified_global, mode = "all")
-  V(network_simplified_global)$eigenvector <- 
-    eigen_centrality(network_simplified_global)$vector
-  
-  # Auxiliar for masking nodes that does not exist in a particular line
-  
-  chrom_number <- length(unique(V(network_simplified_global)$chromosome))
-  
-  palette <- hcl.colors(14, "Set3", rev = TRUE)
-  palette <- setNames(palette, unique(V(network_simplified_global)$chromosome))
-  
-  V(network_simplified_global)$chrom_color1 <- 
-    palette[V(network_simplified_global)$chromosome]
-  
-  # Convert to a tidygraph object
-  tidy_network_global <- as_tbl_graph(network_simplified_global, 
-                                      directed = F)
-  
-  return(tidy_network_global)
-}
-
 # Apply the function to your data
 networks <- mapply(sig_network_builder, 
                    final_result_split,
@@ -1051,90 +747,6 @@ networks <- mapply(sig_network_builder,
                    SIMPLIFY = FALSE)
 
 # 8.2) Plotting the networks ----
-
-plot_network <- function(networks, 
-                         edge_breaks = c(0, 0.01, 0.02, 0.05, 0.10, 0.14),
-                         range = c(0, 5)) {
-  for (i in 1:length(names(networks))) {
-    pdf_file <- paste0("Plots/Networks/Network_", names(networks)[i], ".pdf")
-    CairoPDF(file = pdf_file, width = 12, height = 10)
-    
-    p <- ggraph(networks[[i]], layout = "circle") +
-      geom_edge_link(aes(edge_width = weight, 
-                         edge_color = color1),
-                     lineend = 'round',
-                     linejoin = 'bevel') +
-      geom_edge_link(aes(edge_width = weight, 
-                         edge_color = color4),
-                     lineend = 'round',
-                     linejoin = 'bevel') +
-      geom_edge_link(aes(edge_width = weight, 
-                         edge_color = color5),
-                     lineend = 'round',
-                     linejoin = 'bevel') +
-      geom_edge_link(aes(edge_width = weight, 
-                         edge_color = color2),
-                     lineend = 'round',
-                     linejoin = 'bevel') +
-      geom_edge_link(aes(edge_width = weight, 
-                         edge_color = color3),
-                     lineend = 'round',
-                     linejoin = 'bevel') +
-      geom_node_point(aes(color = chrom_color1, 
-                          size = eigenvector),
-                      na.rm = TRUE) +  # Fill the nodes with a color based on the chromosome attribute
-      geom_node_text(aes(label = name), 
-                     size = 5,
-                     repel = T,
-                     hjust = 0,
-                     vjust = 0) +  # Use the sorted names for the labels
-      scale_edge_width_continuous(range = range, 
-                                  breaks = edge_breaks,
-                                  labels = as.character(edge_breaks)) +
-      scale_radius(range = c(1, 20), breaks = c(0.0, 0.15, 0.2, 0.55, 1.0),
-                   labels = as.character(c(0.0, 0.15, 0.2, 0.55, 1.0))) +
-      scale_edge_color_identity() +
-      scale_color_identity() +  # Use a color palette for the ring
-      theme_graph()
-    
-    print(p)  # Print the plot to the PDF file
-    dev.off()
-  }
-}
-
-plot_network_lite <- function(networks, 
-                         edge_breaks = c(0, 0.01, 0.02, 0.05, 0.10, 0.14),
-                         range = c(0, 10)) {
-  for (i in 1:length(names(networks))) {
-    pdf_file <- paste0("Plots/Networks/Network_", names(networks)[i], ".pdf")
-    CairoPDF(file = pdf_file, width = 8, height = 6)
-    
-    p <- ggraph(networks[[i]], layout = "circle") +
-      geom_edge_link(aes(edge_width = weight, 
-                         edge_color = color),
-                     lineend = 'round',
-                     linejoin = 'bevel') +
-      geom_node_point(aes(color = chrom_color1, 
-                          size = eigenvector),
-                      na.rm = TRUE) +  # Fill the nodes with a color based on the chromosome attribute
-      geom_node_text(aes(label = name), 
-                     size = 5,
-                     repel = T,
-                     hjust = 0,
-                     vjust = 0) +  # Use the sorted names for the labels
-      scale_edge_width_continuous(range = range, 
-                                  breaks = edge_breaks,
-                                  labels = as.character(edge_breaks)) +
-      scale_radius(range = c(1, 15), breaks = c(0.0, 0.15, 0.2, 0.55, 1.0),
-                   labels = as.character(c(0.0, 0.15, 0.2, 0.55, 1.0))) +
-      scale_edge_color_identity() +
-      scale_color_identity() +  # Use a color palette for the ring
-      theme_graph()
-    
-    print(p)  # Print the plot to the PDF file
-    dev.off()
-  }
-}
 
 plot_network(networks)
 
@@ -1145,7 +757,7 @@ df <- data.frame(chromosome = unique(V(networks[[1]])$chromosome),
                  color = hcl.colors(14, "Set3", rev = TRUE))
 
 # Create a plot that only contains the legend
-pdf("Plots/Networks/Chromosome_legend.pdf", width = 2, height = 8)
+pdf("Results/Plots/Networks/Chromosome_legend.pdf", width = 2, height = 8)
 
 legend_plot <- ggplot(df, aes(x = 1, fill = chromosome)) +
   geom_tile(aes(y = chromosome)) +
@@ -1165,45 +777,6 @@ dev.off()
 
 # Building a network with only 6 nodes (two dosages for the study cases)
 
-# Function to count the occurrences of each inversion across the lines
-count_inversions <- function(data_list) {
-  # Initialize an empty list to store inversion counts
-  inversion_counts <- list()
-  
-  # Loop through each matrix in the list
-  for (name in names(data_list)) {
-    # Get the row names (inversion names) for the current matrix
-    inversions <- rownames(data_list[[name]])
-    
-    # Count the occurrences of each inversion
-    for (inversion in inversions) {
-      if (inversion %in% names(inversion_counts)) {
-        inversion_counts[[inversion]] <- inversion_counts[[inversion]] + 1
-      } else {
-        inversion_counts[[inversion]] <- 1
-      }
-    }
-  }
-  
-  # Convert the list to a data frame for easier manipulation
-  inversion_counts_df <- data.frame(
-    inversion = names(inversion_counts),
-    count = unlist(inversion_counts)
-  )
-  
-  return(inversion_counts_df)
-}
-
-# Function to select inversions that appear multiple times
-select_frequent_inversions <- function(inversion_counts_df, min_count = 2) {
-  # Filter inversions that appear at least min_count times
-  frequent_inversions <- inversion_counts_df[
-    inversion_counts_df$count >= min_count, ]
-  
-  return(frequent_inversions)
-}
-
-# Example usage
 inversion_counts_df <- count_inversions(Data_d_l)
 frequent_inversions <- select_frequent_inversions(inversion_counts_df, 
                                                   min_count = 7)
@@ -1260,42 +833,6 @@ G_replicated <- perform_heterogeneity_analysis(
 )
 
 # 9) Network analysis ----
-
-# Function to compare two networks
-compare_networks <- function(g1, g2) {
-  # Check if the networks are isomorphic
-  is_isomorphic <- igraph::isomorphic(g1, g2)
-  
-  # Compare network statistics
-  avg_path_length_diff <- abs(igraph::mean_distance(g1, directed = FALSE) - igraph::mean_distance(g2, directed = FALSE))
-  clustering_coeff_diff <- abs(igraph::transitivity(g1) - igraph::transitivity(g2))
-  
-  # Compare spectra
-  spectrum_g1 <- eigen(igraph::as_adjacency_matrix(g1))
-  spectrum_g2 <- eigen(igraph::as_adjacency_matrix(g2))
-  spectrum_diff <- sum((spectrum_g1$values - spectrum_g2$values)^2)
-  
-  # Return a list with the comparison results
-  return(list(is_isomorphic = is_isomorphic,
-              avg_path_length_diff = avg_path_length_diff,
-              clustering_coeff_diff = clustering_coeff_diff,
-              spectrum_diff = spectrum_diff))
-}
-
-# Function to compare all pairs of networks
-compare_all_pairs <- function(networks) {
-  n <- length(networks)
-  comparisons <- list()
-  
-  for (i in 1:(n-1)) {
-    for (j in (i+1):n) {
-      comparison <- compare_networks(networks[[i]], networks[[j]])
-      comparisons[[paste0(names(networks)[i], "_vs_", names(networks)[j])]] <- comparison
-    }
-  }
-  
-  return(comparisons)
-}
 
 # Compare all pairs of networks
 network_comparisons <- compare_all_pairs(networks)
@@ -1436,7 +973,7 @@ summary(final_model)
 
 eigenvectors_df$predicted_eigenvector <- predict(final_model, eigenvectors_df)
 
-pdf("Plots/Genes_Eigenvector_Degree_Relationship.pdf", width = 8, height = 6)
+pdf("Results/Plots/Genes_Eigenvector_Degree_Relationship.pdf", width = 8, height = 6)
 
 ggplot(data = eigenvectors_df, aes(x = INV_gene_number, y = eigenvector, 
                                    color = degree)) +
@@ -1457,7 +994,7 @@ dev.off()
 
 # Plotting the model (color coding line)
 
-pdf("Plots/Genes_Eigenvector_Line_Relationship.pdf", width = 8, height = 6)
+pdf("Results/Plots/Genes_Eigenvector_Line_Relationship.pdf", width = 8, height = 6)
 
 ggplot(data = eigenvectors_df, aes(x = INV_gene_number, y = eigenvector)) +
   geom_point(aes(color = line)) + # Color points by 'line'
