@@ -14,9 +14,11 @@ process_submatrix_tests <- function(submatrices,
   sapply(submatrices, function(mat) {
     vectors <- two_vectors_from_submatrix(mat)
     if (test_type == "affinity") {
-      affinity(matrix(unlist(vectors), nrow = 2, byrow = TRUE),
-               row.or.col = 'row', datatype = 'binary',
-               pvalType = "midP", sigdigit = 3)$all[, 'p_value']
+      as.numeric(
+        affinity(matrix(unlist(vectors), nrow = 2, byrow = TRUE),
+                 row.or.col = 'row', datatype = 'binary',
+                 pvalType = "midP", sigdigit = 3)$all[, 'p_value']
+      )
     } else {
       jaccard.test(vectors[[1]], vectors[[2]],
                    method = "bootstrap", B = 10000, verbose = FALSE)$pvalue

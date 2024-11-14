@@ -402,6 +402,13 @@ write.csv(final_result_stringent_any, "Results/final_result_stringent_any.csv",
 write.csv(final_result_stringent_all, "Results/final_result_stringent_all.csv", 
           row.names = FALSE)
 
+# 5.3) Summarizing overall patterns ----
+
+deviants_summary <- deviant_signal_summarizer(final_result_relaxed_all)
+
+write.table(deviants_summary, "Results/deviants_summary.txt", 
+            row.names = FALSE, quote = FALSE, sep = "\t")
+
 # 6) Visualization of the relevant patterns in terms of evidence ----
 
 # 6.1) Evidence according to X2_global ----
@@ -906,11 +913,8 @@ eigenvectors_df$Presence <- ifelse(eigenvectors_df$degree > 0, "Present",
 
 eigenvectors_df$INV_ID <- sapply(strsplit(eigenvectors_df$node, "_"), `[`, 2)
 
-eigenvectors_df <- eigenvectors_df |>
-  mutate(INV_ID = as.numeric(INV_ID))
-
 eigenvectors_df <- eigenvectors_df %>%
-  left_join(genes_inv_metadata[, c("INV_ID", "INV_gene_number")], 
+  left_join(metadata[, c("INV_ID", "Genes")], 
             by = "INV_ID")
 
 # Filtering out the nodes with degree 0
@@ -919,7 +923,7 @@ eigenvectors_df <- eigenvectors_df |>
   filter(degree > 0)
 
 # Taking the log of the number of genes in the inversion
-eigenvectors_df$log_INV_gene_number <- log(eigenvectors_df$INV_gene_number)
+eigenvectors_df$log_INV_gene_number <- log(eigenvectors_df$Genes)
 
 eigenvectors_df <- eigenvectors_df |> 
   mutate(line = as.factor(line),
@@ -934,7 +938,7 @@ full_model <- lm(eigenvector ~ ., data = eigenvectors_df[, c("eigenvector",
                                                               "degree", 
                                                               "log_INV_gene_number", 
                                                               "INV_ID",
-                                                              "INV_gene_number", 
+                                                              "Genes", 
                                                               "line")])
 
 # Perform backward stepwise selection based on AIC
@@ -942,20 +946,20 @@ full_model <- lm(eigenvector ~ ., data = eigenvectors_df[, c("eigenvector",
 
 scope_list <- list(
   lower = ~ 1,  # The simplest model, only the intercept
-  upper = ~ degree + log_INV_gene_number + INV_ID + INV_gene_number + line + 
-    I(degree^2) + I(log_INV_gene_number^2) + I(INV_gene_number^2) + 
-    degree:log_INV_gene_number + degree:INV_ID + degree:INV_gene_number + 
+  upper = ~ degree + log_INV_gene_number + INV_ID + Genes + line + 
+    I(degree^2) + I(log_INV_gene_number^2) + I(Genes^2) + 
+    degree:log_INV_gene_number + degree:INV_ID + degree:Genes + 
     degree:line + 
-    log_INV_gene_number:INV_ID + log_INV_gene_number:INV_gene_number + 
+    log_INV_gene_number:INV_ID + log_INV_gene_number:Genes + 
     log_INV_gene_number:line + 
-    INV_ID:INV_gene_number + INV_ID:line + INV_gene_number:line  # An example of a more complex model
+    INV_ID:Genes + INV_ID:line + Genes:line  # An example of a more complex model
 )
 
 # Perform stepwise selection based on AIC, correcting the scope usage
 model_selected_aic <- step(full_model, direction = "both", 
                            scope = scope_list, steps = 100000)
 
-final_model <- rlm(eigenvector ~ degree + INV_gene_number + line +
+final_model <- rlm(eigenvector ~ degree + Genes + line +
                      I(log_INV_gene_number^2), data = eigenvectors_df)
 
 # Estimating the p-values
@@ -975,7 +979,7 @@ eigenvectors_df$predicted_eigenvector <- predict(final_model, eigenvectors_df)
 
 pdf("Results/Plots/Genes_Eigenvector_Degree_Relationship.pdf", width = 8, height = 6)
 
-ggplot(data = eigenvectors_df, aes(x = INV_gene_number, y = eigenvector, 
+ggplot(data = eigenvectors_df, aes(x = Genes, y = eigenvector, 
                                    color = degree)) +
   geom_point() + # Plot points
   geom_line(aes(y = predicted_eigenvector), color = "black") + # Add a regression line
@@ -996,7 +1000,7 @@ dev.off()
 
 pdf("Results/Plots/Genes_Eigenvector_Line_Relationship.pdf", width = 8, height = 6)
 
-ggplot(data = eigenvectors_df, aes(x = INV_gene_number, y = eigenvector)) +
+ggplot(data = eigenvectors_df, aes(x = Genes, y = eigenvector)) +
   geom_point(aes(color = line)) + # Color points by 'line'
   geom_line(aes(y = predicted_eigenvector, 
                 group = line, 

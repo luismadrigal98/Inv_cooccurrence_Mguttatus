@@ -36,7 +36,8 @@ required_libraries <- c("dplyr", "ggplot2", "foreach", "doParallel",
                         "gplots", "igraph", "tidygraph", "ggraph",
                         "reshape2", "Cairo", "vegan", "rcompanion",
                         "chisq.posthoc.test", "MASS", "repmod",
-                        "gtools", "viridis", "car", "nortest")
+                        "gtools", "viridis", "car", "nortest",
+                        "tidyr", "corrplot")
 
 ## 1.3) Sourcing the setup function ----
 source("src/set_environment.R")
@@ -61,7 +62,7 @@ Data <- list()
 for(file in list.files('Data/CSVs', 
                        full.names = T))
 {
-  name <- strsplit(x = file, split = '/')[[1]][7]
+  name <- strsplit(x = file, split = '/')[[1]][3]
   name <- strsplit(x = name, split = '_')[[1]][4]
   name <- name <- sub("\\..*$", "", name)
   
@@ -146,5 +147,17 @@ source("R_scripts/Aux2_Segregation_distortion_analysis.R")
 ## _____________________________________________________________________________
 
 source("R_scripts/Aux3_Co_occurrence_per_line.R")
+
+## *****************************************************************************
+## 7) SDV and co-occurrence metrics' relation ----
+## _____________________________________________________________________________
+
+source("R_scripts/Aux4_Individual_effects_and_co-occurrence_patterns.R")
+
+## *****************************************************************************
+## 8) Close the parallel backend and save the environment for further inspection ----
+## _____________________________________________________________________________
+
+stopCluster(cl)
 
 save.image('Env') ## In case you want to inspect the results closely.

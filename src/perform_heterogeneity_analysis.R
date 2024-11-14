@@ -32,7 +32,7 @@ perform_heterogeneity_analysis <- function(mask,
     mutate(Inv_1 = as.character(Inv_1),
            Inv_2 = as.character(Inv_2)) |>
     replicated_G_test(degrees_of_fred_replicates = degrees_of_freedom,
-                      Data_p_a = data_subset)
+                      Data = data_subset)
   
   return(G_results)
 }

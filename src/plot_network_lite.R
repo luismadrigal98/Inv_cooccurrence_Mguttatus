@@ -12,7 +12,7 @@ plot_network_lite <- function(networks,
   #' ___________________________________________________________________________
   
   for (i in 1:length(names(networks))) {
-    pdf_file <- paste0("Plots/Networks/Network_", names(networks)[i], ".pdf")
+    pdf_file <- paste0("Results/Plots/Networks/Network_", names(networks)[i], ".pdf")
     CairoPDF(file = pdf_file, width = 8, height = 6)
     
     p <- ggraph(networks[[i]], layout = "circle") +
