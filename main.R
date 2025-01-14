@@ -37,7 +37,7 @@ required_libraries <- c("dplyr", "ggplot2", "foreach", "doParallel",
                         "reshape2", "Cairo", "vegan", "rcompanion",
                         "chisq.posthoc.test", "MASS", "repmod",
                         "gtools", "viridis", "car", "nortest",
-                        "tidyr", "corrplot")
+                        "tidyr", "corrplot", "genetics", "copula")
 
 ## 1.3) Sourcing the setup function ----
 source("src/set_environment.R")
