@@ -108,8 +108,8 @@ calculate_LD <- function(vector1, vector2)
   
   # Getting the frequency of the haplotype AB
   
-  mask <- (vector1 == 1) == (vector2 == 1) # Getting those cases where both alleles
-                                           # are together
+  mask <- (vector1 == 1) & (vector2 == 1) # Getting those cases where both alleles
+                                           # are present
   
   pAB <- sum(mask) / N
   
@@ -146,5 +146,91 @@ calculate_jaccard_for_alleles <- function(vector1, vector2)
   #' @return Numeric. Jaccard-Tanimoto index.
   #' ___________________________________________________________________________
   
-  jaccard.test(vector1, vector2, method = 'mca')$statistics
+  jaccard.test(vector1, vector2, method = 'bootstrap')$statistics
 }
+
+calculate_affinity_for_alleles <- function(data, which_dim = 'col')
+{
+  affinity(data = data, row.or.col = which_dim)$all$alpha_mle
+}
+
+# Get linkage disequilibrium metrics and jaccard metric for an array of allele
+# frequencies to show frequency-dependence of LD and frequency independence of
+# jaccard
+
+compare_measures <- function(freq_range,
+                             n_samples = 400,
+                             n_reps = 100,
+                             association_strength = 0.5)
+{
+  
+  results <- expand.grid(freq1 = freq_range,
+                         freq2 = freq_range,
+                         rep = 1:n_reps) |>
+    dplyr::mutate(D = NA,
+                  D_prime = NA,
+                  cJaccard = NA,
+                  Affinity = NA)
+  
+  foreach(i = 1:nrow(results)) %dopar%
+    {
+      data <- data <- simulate_frequency_data(n_samples, 
+                                              results$freq1[i], 
+                                              results$freq2[i], 
+                                              association_strength)
+      
+      # Getting the allele vectors 
+      allele1 <- geno_to_allele(data$inv1)
+      allele2 <- geno_to_allele(data$inv2)
+      
+      # Calculate LD metrics
+      results$D[i] <- calculate_LD(allele1, allele2)$D
+      results$D_prime[i] <- calculate_LD(allele1, allele2)$D_prime
+      
+      # Calculate jaccard metric
+      results$cJaccard[i] <- calculate_jaccard_for_alleles(allele1, allele2)
+      
+      # Calculate affinity score
+      
+    }
+}
+
+# Generate allele frequencies
+freqs <- seq(0.1, 0.9, by = 0.1)
+
+# Number of repetitions
+n_reps <- 100
+
+# Store results
+results <- list()
+
+for (freq in freqs) {
+  D_vals <- numeric(n_reps)
+  D_prime_vals <- numeric(n_reps)
+  jaccard_vals <- numeric(n_reps)
+  
+  for (rep in 1:n_reps) {
+    data <- simulate_frequency_data(1000, freq, freq, 0.7)
+    alleles1 <- geno_to_allele(data[, 1])
+    alleles2 <- geno_to_allele(data[, 2])
+    ld <- calculate_LD(alleles1, alleles2)
+    jaccard <- calculate_jaccard_for_alleles(alleles1, alleles2)
+    D_vals[rep] <- ld['D']
+    D_prime_vals[rep] <- ld['D_prime']
+    jaccard_vals[rep] <- jaccard
+  }
+  
+  results[[as.character(freq)]] <- list(D = D_vals,
+                                        D_prime = D_prime_vals, 
+                                        Jaccard = jaccard_vals)
+}
+
+# Calculate variances
+variances <- sapply(results, function(res) {
+  c(var_D = var(res$D), var_D_prime = var(res$D_prime), 
+    var_Jaccard = var(res$Jaccard))
+})
+
+variances <- t(variances)
+colnames(variances) <- c("Variance_D", "Variance_D_prime", "Variance_Jaccard")
+print(variances)
