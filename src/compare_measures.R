@@ -1,11 +1,17 @@
-# Get linkage disequilibrium metrics and jaccard metric for an array of allele
-# frequencies to show frequency-dependence of LD and frequency independence of
-# jaccard
-
 compare_measures <- function(freq_range,
                              n_samples = 400,
                              n_reps = 100,
-                             association_strength = 0.5) {
+                             association_strength = 0.5) 
+{
+  #' Compare LD, Jaccard and Affinity measures
+  #' 
+  #' @param freq_range A vector of allele frequencies to simulate
+  #' @param n_samples Number of samples to simulate
+  #' @param n_reps Number of replicates to simulate
+  #' @param association_strength The strength of association between alleles
+  #' 
+  #' @return A data frame with the results of the simulation
+  #' ___________________________________________________________________________
   
   # Create parameter combinations
   param_grid <- expand.grid(freq1 = freq_range,
@@ -48,7 +54,7 @@ compare_measures <- function(freq_range,
         cJaccard = cJaccard,
         Affinity = affinity
       )
-  }
+    }
   
   # Convert list to dataframe
   results <- do.call(rbind, results_list)
@@ -56,62 +62,3 @@ compare_measures <- function(freq_range,
   
   return(results)
 }
-
-## Visualization
-
-plot_heatmap <- function(data, measure) {
-  data %>%
-    group_by(freq1, freq2) %>%
-    summarize(
-      mean_value = mean(!!sym(measure)),
-      sd_value = sd(!!sym(measure))
-    ) %>%
-    ggplot(aes(x=freq1, y=freq2, fill=mean_value)) +
-    geom_tile() +
-    scale_fill_gradient2(
-      low="blue", 
-      mid="white",
-      high="red",
-      midpoint=0
-    ) +
-    labs(
-      title=paste("Mean", measure, "by Inversion Frequencies"),
-      x="Frequency of Inversion 1",
-      y="Frequency of Inversion 2"
-    ) +
-    theme_minimal()
-}
-
-freqs <- seq(0.1, 0.9, 0.1)
-
-results <- compare_measures(freqs, n_reps = 1000)
-
-p0 <- plot_heatmap(results, "D")
-p1 <- plot_heatmap(results, "D_prime")
-p2 <- plot_heatmap(results, "cJaccard")
-p3 <- plot_heatmap(results, "Affinity")
-
-## Testing for frequency dependece
-## Proxy: R2 coefficients
-
-# Calculate frequency dependence metrics
-calc_freq_dependence <- function(data, measure) {
-  model <- lm(paste(measure, "~ freq1 * freq2"), data=data)
-  summary(model)$r.squared
-}
-
-d_r2 <- calc_freq_dependence(results, "D")
-dprime_r2 <- calc_freq_dependence(results, "Dprime")
-cjaccard_r2 <- calc_freq_dependence(results, "cJaccard")
-affinity_r2 <- calc_freq_dependence(results, "Affinity")
-
-# Calculating the variances per replicate
-
-results_var <- results |>
-  dplyr::group_by(freq1, freq2) |>
-  summarize(
-    var_D = var(D),
-    var_D_prime = var(D_prime),
-    var_cJaccard = var(cJaccard),
-    var_Affinity = var(Affinity)
-  )
