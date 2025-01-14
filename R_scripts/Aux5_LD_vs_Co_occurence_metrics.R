@@ -151,7 +151,8 @@ calculate_jaccard_for_alleles <- function(vector1, vector2)
 
 calculate_affinity_for_alleles <- function(data, which_dim = 'col')
 {
-  affinity(data = data, row.or.col = which_dim)$all$alpha_mle
+  CooccurrenceAffinity::affinity(data = data, 
+                                 row.or.col = which_dim)$all$alpha_mle
 }
 
 # Get linkage disequilibrium metrics and jaccard metric for an array of allele
@@ -161,76 +162,111 @@ calculate_affinity_for_alleles <- function(data, which_dim = 'col')
 compare_measures <- function(freq_range,
                              n_samples = 400,
                              n_reps = 100,
-                             association_strength = 0.5)
-{
+                             association_strength = 0.5) {
   
-  results <- expand.grid(freq1 = freq_range,
-                         freq2 = freq_range,
-                         rep = 1:n_reps) |>
-    dplyr::mutate(D = NA,
-                  D_prime = NA,
-                  cJaccard = NA,
-                  Affinity = NA)
+  # Create parameter combinations
+  param_grid <- expand.grid(freq1 = freq_range,
+                            freq2 = freq_range,
+                            rep = 1:n_reps)
   
-  foreach(i = 1:nrow(results)) %dopar%
+  # Run in parallel
+  results_list <- foreach(i = 1:nrow(param_grid), 
+                          .packages = c('foreach'),
+                          .export = c('simulate_frequency_data',
+                                      'geno_to_allele',
+                                      'calculate_LD',
+                                      'calculate_jaccard_for_alleles',
+                                      'calculate_affinity_for_alleles',
+                                      'normalCopula',
+                                      'cCopula',
+                                      'jaccard.test')) %dopar% 
     {
-      data <- data <- simulate_frequency_data(n_samples, 
-                                              results$freq1[i], 
-                                              results$freq2[i], 
-                                              association_strength)
+      data <- simulate_frequency_data(n_samples, param_grid$freq1[i], 
+                                      param_grid$freq2[i], 
+                                      association_strength)
       
       # Getting the allele vectors 
       allele1 <- geno_to_allele(data$inv1)
       allele2 <- geno_to_allele(data$inv2)
+      allele_data <- data.frame(allele1, allele2)
       
-      # Calculate LD metrics
-      results$D[i] <- calculate_LD(allele1, allele2)$D
-      results$D_prime[i] <- calculate_LD(allele1, allele2)$D_prime
+      # Calculate all metrics
+      ld_res <- calculate_LD(allele1, allele2)
+      cJaccard <- calculate_jaccard_for_alleles(allele1, allele2)
+      affinity <- calculate_affinity_for_alleles(allele_data)
       
-      # Calculate jaccard metric
-      results$cJaccard[i] <- calculate_jaccard_for_alleles(allele1, allele2)
-      
-      # Calculate affinity score
-      
-    }
-}
-
-# Generate allele frequencies
-freqs <- seq(0.1, 0.9, by = 0.1)
-
-# Number of repetitions
-n_reps <- 100
-
-# Store results
-results <- list()
-
-for (freq in freqs) {
-  D_vals <- numeric(n_reps)
-  D_prime_vals <- numeric(n_reps)
-  jaccard_vals <- numeric(n_reps)
-  
-  for (rep in 1:n_reps) {
-    data <- simulate_frequency_data(1000, freq, freq, 0.7)
-    alleles1 <- geno_to_allele(data[, 1])
-    alleles2 <- geno_to_allele(data[, 2])
-    ld <- calculate_LD(alleles1, alleles2)
-    jaccard <- calculate_jaccard_for_alleles(alleles1, alleles2)
-    D_vals[rep] <- ld['D']
-    D_prime_vals[rep] <- ld['D_prime']
-    jaccard_vals[rep] <- jaccard
+      # Return results as vector
+      c(
+        freq1 = param_grid$freq1[i],
+        freq2 = param_grid$freq2[i],
+        rep = param_grid$rep[i],
+        ld_res['D'],
+        ld_res['D_prime'],
+        cJaccard = cJaccard,
+        Affinity = affinity
+      )
   }
   
-  results[[as.character(freq)]] <- list(D = D_vals,
-                                        D_prime = D_prime_vals, 
-                                        Jaccard = jaccard_vals)
+  # Convert list to dataframe
+  results <- do.call(rbind, results_list)
+  results <- as.data.frame(results)
+  
+  return(results)
 }
 
-# Calculate variances
-variances <- sapply(results, function(res) {
-  c(var_D = var(res$D), var_D_prime = var(res$D_prime), 
-    var_Jaccard = var(res$Jaccard))
-})
+## Vis
 
-variances <- t(variances)
-colnames(variances) <- c("Variance_D", "Variance_D_prime", "Variance_Jaccard")
-print(variances)
+plot_heatmap <- function(data, measure) {
+  data %>%
+    group_by(freq1, freq2) %>%
+    summarize(
+      mean_value = mean(!!sym(measure)),
+      sd_value = sd(!!sym(measure))
+    ) %>%
+    ggplot(aes(x=freq1, y=freq2, fill=mean_value)) +
+    geom_tile() +
+    scale_fill_gradient2(
+      low="blue", 
+      mid="white",
+      high="red",
+      midpoint=0
+    ) +
+    labs(
+      title=paste("Mean", measure, "by Inversion Frequencies"),
+      x="Frequency of Inversion 1",
+      y="Frequency of Inversion 2"
+    ) +
+    theme_minimal()
+}
+
+results <- compare_measures(freqs, n_reps = 1000)
+
+p0 <- plot_heatmap(results, "D")
+p1 <- plot_heatmap(results, "D_prime")
+p2 <- plot_heatmap(results, "cJaccard")
+p3 <- plot_heatmap(results, "Affinity")
+
+## Testing for frequency dependece
+## Proxy: R2 coefficients
+
+# Calculate frequency dependence metrics
+calc_freq_dependence <- function(data, measure) {
+  model <- lm(paste(measure, "~ freq1 * freq2"), data=data)
+  summary(model)$r.squared
+}
+
+d_r2 <- calc_freq_dependence(results, "D")
+dprime_r2 <- calc_freq_dependence(results, "Dprime")
+cjaccard_r2 <- calc_freq_dependence(results, "cJaccard")
+affinity_r2 <- calc_freq_dependence(results, "Affinity")
+
+# Calculating the variances per replicate
+
+results_var <- results |>
+  dplyr::group_by(freq1, freq2) |>
+  summarize(
+    var_D = var(D),
+    var_D_prime = var(D_prime),
+    var_cJaccard = var(cJaccard),
+    var_Affinity = var(Affinity)
+  )
