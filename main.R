@@ -20,6 +20,8 @@
 ##' using remotes. 
 ##' ____________________________________________________________________________
 
+## <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< START >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ##
+
 ## *****************************************************************************
 ## 1) Setting up the environment, the seed, and the libraries ----
 ## _____________________________________________________________________________
@@ -171,7 +173,9 @@ source("R_scripts/Aux3_Co_occurrence_per_line.R")
 ## 7) SDV and co-occurrence metrics' relation ----
 ## _____________________________________________________________________________
 
-
+#' This section of the analysis will show whether there exist a relationship 
+#' between the segregation distortion of individual inversions and their
+#' association pattern with other inversions.
 
 source("R_scripts/Aux4_Individual_effects_and_co-occurrence_patterns.R")
 
@@ -179,6 +183,12 @@ source("R_scripts/Aux4_Individual_effects_and_co-occurrence_patterns.R")
 ## 8) Complementary comparison between LD metrics and co-occurrence ones at allele level ----
 ## _____________________________________________________________________________
 
+#' To complement the utilities of the co-occurrence metric in the genetic context,
+#' a simple comparison between two linkage disequilibrium (LD) metrics and the
+#' co-occurrence metrics will be established at the allele level, even though we
+#' are exploring genotypic associations in this study.
+
+# <<<<<<<<<<<<<<<<<<<<<<<<<<< COMPLEMENTARY >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 source("R_scripts/Aux5_LD_vs_Co_occurence_metrics.R")
 
 ## *****************************************************************************
@@ -187,4 +197,6 @@ source("R_scripts/Aux5_LD_vs_Co_occurence_metrics.R")
 
 stopCluster(cl)
 
-save.image('Env') ## In case you want to inspect the results closely.
+save.image('Env') ## In case you want to inspect the results closely. OPTIONAL.
+
+## <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< END >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ##

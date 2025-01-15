@@ -155,21 +155,21 @@ for (level in unique(p_df$Test))
 
 # 2.1) Survival per cell ----
 
-survival <- c(rep(1, 8), 0.2) # 9th cell deflated
+survival <- c(rep(1, 8), 0.2) # 9th cell count deflated
 
 survival <- matrix(survival, nrow = 3, ncol = 3)
 
-# 2.2) Simulating the tables the 9th cell deflated ----
+# 2.2) Simulating the tables the 9th cell count deflated ----
 
 expected_9_deflated <- expected_mod(expected, survival)
 
 model_9_deflated <- table_sim_null(100000, 9, n_ind, expected_9_deflated)
 
-# 2.3) Checking the p-values for the 9th cell deflated model ----
+# 2.3) Checking the p-values for the 9th cell count deflated model ----
 
 p_values_9_deflated_model <- p_value_extractor(model_9_deflated, expected)
 
-# Plotting the p_values associated to the 9th cell deflated model ----
+# Plotting the p_values associated to the 9th cell count deflated model ----
 
 p_df_9_deflated <- data.frame(
   p_values_X2 = p_values_9_deflated_model[[1]],
@@ -302,21 +302,21 @@ dev.off()
 
 # 3.1) Survival per cell ----
 
-survival_2 <- c(rep(0.7, 7), 0.2 , 1) # 8th cell deflated and 9th inflated
+survival_2 <- c(rep(0.7, 7), 0.2 , 1) # 8th cell count deflated and 9th cell count inflated
 
 survival_2 <- matrix(survival_2, nrow = 3, ncol = 3)
 
-# 2.2) Simulating the tables the 9th cell deflated ----
+# 3.2) Simulating the tables with two cell counts modified ----
 
 expected_9and8 <- expected_mod(expected, survival_2)
 
 model_9and8  <- table_sim_null(100000, 9, n_ind, expected_9and8)
 
-# 2.3) Checking the p-values for the 9th cell deflated model ----
+# 3.3) Checking the p-values for the tables with two cell counts ----
 
 p_values_9and8 <- p_value_extractor(model_9and8, expected)
 
-# Plotting the p_values associated to the 9th cell deflated model ----
+# Plotting the p_values associated to the two cell counts modified ----
 
 p_df_9and8 <- data.frame(
   p_values_X2 = p_values_9and8[[1]],
