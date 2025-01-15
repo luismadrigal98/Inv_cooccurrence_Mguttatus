@@ -9,6 +9,18 @@
 ##' 
 ##' @Author: Luis Javier Madriga-Roca & John K. Kelly
 ##' 
+##' @note
+##' This analysis is based on the procedures described in the papers:
+##' 
+##' Lorieux, M., Perrier, X., Goffinet, B., Lanaud, C., & De León, D. G. (1995). 
+##' Maximum-likelihood models for mapping genetic markers showing segregation 
+##' distortion. 2. F2 populations. Theoretical and Applied Genetics, 90(1), 
+##' 81–89. https://doi.org/10.1007/BF00220999
+##' 
+##' Roff, D. A. (2002). INBREEDING DEPRESSION: TESTS OF THE OVERDOMINANCE AND 
+##' PARTIAL DOMINANCE HYPOTHESES. Evolution, 56(4), 768–775. 
+##' https://doi.org/10.1111/j.0014-3820.2002.tb01387.x
+##' 
 ##' @Date: 09/03/2024
 ##' ____________________________________________________________________________
 ##' <<<<<<<<<<<<<<<<<<<<<<<<<<<< Start >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
