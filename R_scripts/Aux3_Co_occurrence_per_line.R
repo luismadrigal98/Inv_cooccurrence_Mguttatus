@@ -270,8 +270,7 @@ for (i in 1:length(jaccard_tanimoto_results_df_filtered))
 
 # Correcting the p_values ----
 jaccard_tanimoto_results_df_filtered <- sapply(X = jaccard_tanimoto_results_df_filtered, 
-                                      FUN = p_corrector, var = "p_value", 
-                                      method = "BY",
+                                      FUN = p_corrector, var = "p_value",
                                       simplify = F)
 
 # 4.2) Affinity measure ----
@@ -313,8 +312,7 @@ results_affinity_filtered <- sapply(X = results_affinity,
 
 results_affinity_filtered <- sapply(X = results_affinity_filtered, 
                                     FUN = p_corrector, 
-                                    var = "p_value", 
-                                    method = "BY",
+                                    var = "p_value",
                                     simplify = F)
 
 # 5) Extracting the significant values detected for the three scores ----

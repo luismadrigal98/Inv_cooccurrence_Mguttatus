@@ -43,8 +43,8 @@ for (i in 1:length(goodness_of_fit_df))
   # Multiple testing correction
   
   goodness_of_fit_df[[i]][["p_corrected"]] <- 
-    p.adjust(goodness_of_fit_df[[i]]$p_value, 
-            method = "BH")
+   qvalue(goodness_of_fit_df[[i]]$p_value, fdr.level = 0.1, adj = 1.2,
+          pi0.method="bootstrap")
   rm(i)
 }
 

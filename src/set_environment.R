@@ -1,8 +1,9 @@
 set_environment <- function(required_pckgs, 
                             personal_seed = as.numeric(Sys.time()),
-                            parallel_backend = FALSE)
+                            parallel_backend = FALSE,
+                            download_packages = FALSE)
 {
-  #' This fucntion will set up the working environment for performing all the
+  #' This function will set up the working environment for performing all the
   #' analysis. It will load all the required packages, set the seed for
   #' reproducibility and set the parallel backend if required.
   #' 
@@ -14,6 +15,9 @@ set_environment <- function(required_pckgs,
   #' @param parallel_backend A logical value to set the parallel backend. Default
   #' set to FALSE.
   #' 
+  #' @param download_packages A logical value to download the packages if they are
+  #' not installed. Default set to FALSE.
+  #' 
   #' @return invisible
   #' ___________________________________________________________________________
   
@@ -21,26 +25,29 @@ set_environment <- function(required_pckgs,
   
   message("Loading the required libraries")
   
-  tryCatch(
+  for(pckg in required_pckgs)
   {
-    for(pckg in required_pckgs)
+    if(!require(pckg, character.only = TRUE))
     {
-      if(!require(pckg, character.only = TRUE))
+      if(download_packages)
       {
-        install.packages(pckg)
-        library(pckg, character.only = TRUE)
+        tryCatch({
+          install.packages(pckg)
+          library(pckg, character.only = TRUE)
+        }, error = function(e) {
+          message(paste("Failed to install package:", pckg, ". Try using remotes utilities."))
+          print(e)
+        })
       }
       else
       {
-        library(pckg, character.only = TRUE)
+        stop(paste("Package", pckg, "required but download flag disabled. Set to TRUE or manually install package"))
       }
     }
-    
-    message("The required libraries have been loaded")
-  }, error = function(e) {
-    message("Some packages cannot be installed through CRAN, trying with remotes")
-    print(e)
-  })
+    else library(pckg, character.only = TRUE)
+  }
+  
+  message("The required libraries have been loaded")
   
   ## Setting the seed ----
   set.seed(personal_seed)

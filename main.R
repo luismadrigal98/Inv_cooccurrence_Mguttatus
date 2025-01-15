@@ -3,7 +3,7 @@
 ##' guttatus
 ##' 
 ##' @description This script will source and execute the different analysis employed
-##' in this study, and will generate the figures in the Results sub directory.
+##' in this study, and will generate the figures in the Results subdirectory.
 ##' 
 ##' @author Luis Javier Madrigal-Roca & John K. Kelly
 ##' 
@@ -58,11 +58,13 @@ pull_aux_functions("./src")
 ## 3) Importing the data ----
 ## _____________________________________________________________________________
 
+# Creating a list with one slot per genetic family or cross
 Data <- list()
 
 for(file in list.files('Data/CSVs', 
                        full.names = T))
 {
+  # Getting the name of the cross or genetic family
   name <- strsplit(x = file, split = '/')[[1]][3]
   name <- strsplit(x = name, split = '_')[[1]][4]
   name <- name <- sub("\\..*$", "", name)
@@ -73,6 +75,7 @@ for(file in list.files('Data/CSVs',
   rm(name)
 }
 
+# Transforming the dosage information into presence / absence
 Data_splitted <- lapply(X = Data, FUN = dosage_splitter)
 
 # Create an empty list to store the matrices of presence/absence
@@ -116,9 +119,9 @@ metadata <- read.csv("Data/inv_and_gene_metadata.csv",
 
 # 3.1) Checking the data ----
 
-## Additional checking step for compliance in the marginals.
-## If there is an inversion with a dosage level of 0, it will be removed.
-## Its effect will be captured in the individual effect on survival analysis
+#' Additional checking step for compliance in the marginals.
+#' If there is an inversion with a dosage level of 0, it will be removed.
+#' Its effect will be captured in the individual effect on survival analysis
 
 # Searching for problematic in the data
 
@@ -135,11 +138,21 @@ print(problematic_pairs)
 ## 4) Simulation analysis ----
 ## _____________________________________________________________________________
 
+#' This step is designed to show the performance of the 2x2 and 3x3 table-based
+#' frameworks. Essentially, it shows the advantages of using a more granular 
+#' approach (2x2 tables generated from the omnibus 3x3 table) through the co-
+#' occurrence indexes.
+
 source("R_scripts/Aux1_Contingency_tables_simulation.R")
 
 ## *****************************************************************************
 ## 5) Segregation distortion analysis (SD) ----
 ## _____________________________________________________________________________
+
+#' This step is designed to test for segregation distortion of the individual
+#' inversions. SD can be understood as the individual effect of each inversion in
+#' terms of survival. It is an analysis based on deviations from the Mendelian
+#' expectations.
 
 source("R_scripts/Aux2_Segregation_distortion_analysis.R")
 
@@ -147,11 +160,18 @@ source("R_scripts/Aux2_Segregation_distortion_analysis.R")
 ## 6) Co-occurrence analysis ----
 ## _____________________________________________________________________________
 
+#' This is the main step of the paper. It will explore the pairwise interactome
+#' between the inversions identified by exploiting co-occurrence indexes
+#' traditionally used in ecological studies. Also, network visualizations will
+#' be employed to present the results in a more intuitive manner.
+
 source("R_scripts/Aux3_Co_occurrence_per_line.R")
 
 ## *****************************************************************************
 ## 7) SDV and co-occurrence metrics' relation ----
 ## _____________________________________________________________________________
+
+
 
 source("R_scripts/Aux4_Individual_effects_and_co-occurrence_patterns.R")
 
