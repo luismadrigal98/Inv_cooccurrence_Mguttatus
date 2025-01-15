@@ -1,117 +1,52 @@
-# Get linkage disequilibrium metrics and jaccard metric for an array of allele
-# frequencies to show frequency-dependence of LD and frequency independence of
-# jaccard
+##' >>>>>>>>>>>>>>>>>>>>>>>> AUXILIARY SCRIPT 5 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+##' 
+##' @title Are you with me? Co-occurrence tests from community ecology can 
+##' identify positive and negative epistasis between inversions in Mimulus 
+##' guttatus.
+##' 
+##' @description This script is designed to compare the LD-related metrics D and
+##' D' with the co-occurrance metrics of this paper (centered Jaccard-Tanimoto
+##' and affinity)
+##' 
+##' @author Luis Javier Madrigal-Roca & John K. Kelly
+##' 
+##' @date 2025-01-14
+##' ____________________________________________________________________________
 
-compare_measures <- function(freq_range,
-                             n_samples = 400,
-                             n_reps = 100,
-                             association_strength = 0.5) {
-  
-  # Create parameter combinations
-  param_grid <- expand.grid(freq1 = freq_range,
-                            freq2 = freq_range,
-                            rep = 1:n_reps)
-  
-  # Run in parallel
-  results_list <- foreach(i = 1:nrow(param_grid), 
-                          .packages = c('foreach'),
-                          .export = c('simulate_frequency_data',
-                                      'geno_to_allele',
-                                      'calculate_LD',
-                                      'calculate_jaccard_for_alleles',
-                                      'calculate_affinity_for_alleles',
-                                      'normalCopula',
-                                      'cCopula',
-                                      'jaccard.test')) %dopar% 
-    {
-      data <- simulate_frequency_data(n_samples, param_grid$freq1[i], 
-                                      param_grid$freq2[i], 
-                                      association_strength)
-      
-      # Getting the allele vectors 
-      allele1 <- geno_to_allele(data$inv1)
-      allele2 <- geno_to_allele(data$inv2)
-      allele_data <- data.frame(allele1, allele2)
-      
-      # Calculate all metrics
-      ld_res <- calculate_LD(allele1, allele2)
-      cJaccard <- calculate_jaccard_for_alleles(allele1, allele2)
-      affinity <- calculate_affinity_for_alleles(allele_data)
-      
-      # Return results as vector
-      c(
-        freq1 = param_grid$freq1[i],
-        freq2 = param_grid$freq2[i],
-        rep = param_grid$rep[i],
-        ld_res['D'],
-        ld_res['D_prime'],
-        cJaccard = cJaccard,
-        Affinity = affinity
-      )
-  }
-  
-  # Convert list to dataframe
-  results <- do.call(rbind, results_list)
-  results <- as.data.frame(results)
-  
-  return(results)
-}
-
-## Visualization
-
-plot_heatmap <- function(data, measure) {
-  data %>%
-    group_by(freq1, freq2) %>%
-    summarize(
-      mean_value = mean(!!sym(measure)),
-      sd_value = sd(!!sym(measure))
-    ) %>%
-    ggplot(aes(x=freq1, y=freq2, fill=mean_value)) +
-    geom_tile() +
-    scale_fill_gradient2(
-      low="blue", 
-      mid="white",
-      high="red",
-      midpoint=0
-    ) +
-    labs(
-      title=paste("Mean", measure, "by Inversion Frequencies"),
-      x="Frequency of Inversion 1",
-      y="Frequency of Inversion 2"
-    ) +
-    theme_minimal()
-}
+## 1) Defining the frequencies to test in the simulation ----
 
 freqs <- seq(0.1, 0.9, 0.1)
 
-results <- compare_measures(freqs, n_reps = 1000)
+## 2) Getting the results for the different frequencies and replicates ----
+
+results <- compare_measures(freqs, n_reps = 1000, association_strength = 0.5)
+
+## 3) Plotting the mean value of the statistics as a function of the allele freq ----
 
 p0 <- plot_heatmap(results, "D")
 p1 <- plot_heatmap(results, "D_prime")
 p2 <- plot_heatmap(results, "cJaccard")
 p3 <- plot_heatmap(results, "Affinity")
 
-## Testing for frequency dependece
-## Proxy: R2 coefficients
+## 3.1) Getting all the plots arranged in a 2x2 grid ----
 
-# Calculate frequency dependence metrics
-calc_freq_dependence <- function(data, measure) {
-  model <- lm(paste(measure, "~ freq1 * freq2"), data=data)
-  summary(model)$r.squared
-}
+p <- grid.arrange(p0, p1, p2, p3, ncol = 2)
 
-d_r2 <- calc_freq_dependence(results, "D")
-dprime_r2 <- calc_freq_dependence(results, "Dprime")
-cjaccard_r2 <- calc_freq_dependence(results, "cJaccard")
-affinity_r2 <- calc_freq_dependence(results, "Affinity")
+ggsave(file = "Results/Plots/Mean_metrics_per_freq_combination.pdf", plot = p,
+       width = 10, height = 8)
 
-# Calculating the variances per replicate
+## 4) Analyzing the relationship of LD and co-occurrence metrics with allele freq ----
 
-results_var <- results |>
-  dplyr::group_by(freq1, freq2) |>
-  summarize(
-    var_D = var(D),
-    var_D_prime = var(D_prime),
-    var_cJaccard = var(cJaccard),
-    var_Affinity = var(Affinity)
-  )
+stability_analysis <- analyze_metric_stability(results)
+
+write.table(x = stability_analysis$median_variation, 
+            file = "Results/median_variation_stability_analysis.tsv",
+            sep = '\t')
+
+write.table(stability_analysis$edf_scores, 
+            file = "Results/edf_scores_metrics.tsv",
+            sep = '\t')
+
+write.table(stability_analysis$freq_correlations, 
+            file = "Results/edf_scores_metrics.tsv",
+            sep = '\t')

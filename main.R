@@ -37,7 +37,8 @@ required_libraries <- c("dplyr", "ggplot2", "foreach", "doParallel",
                         "reshape2", "Cairo", "vegan", "rcompanion",
                         "chisq.posthoc.test", "MASS", "repmod",
                         "gtools", "viridis", "car", "nortest",
-                        "tidyr", "corrplot", "genetics", "copula")
+                        "tidyr", "corrplot", "genetics", "copula",
+                        "gridExtra", "mgcv")
 
 ## 1.3) Sourcing the setup function ----
 source("src/set_environment.R")
@@ -155,7 +156,13 @@ source("R_scripts/Aux3_Co_occurrence_per_line.R")
 source("R_scripts/Aux4_Individual_effects_and_co-occurrence_patterns.R")
 
 ## *****************************************************************************
-## 8) Close the parallel backend and save the environment for further inspection ----
+## 8) Complementary comparison between LD metrics and co-occurrence ones at allele level ----
+## _____________________________________________________________________________
+
+source("R_scripts/Aux5_LD_vs_Co_occurence_metrics.R")
+
+## *****************************************************************************
+## 9) Close the parallel backend and save the environment for further inspection ----
 ## _____________________________________________________________________________
 
 stopCluster(cl)
