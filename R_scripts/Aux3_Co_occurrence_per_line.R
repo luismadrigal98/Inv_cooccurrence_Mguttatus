@@ -1,7 +1,17 @@
-## Co_occurrence of inversions in lines of Mimulus guttatus
-#@ Main Script
-#@ Authors: Luis J. Madrigal-Roca & John K. Kelly
-#@ Date: 2024-05-27
+##' >>>>>>>>>>>>>>>>>>>>>>>> AUXILIARY SCRIPT 3 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+##' 
+##' @title Are you with me? Co-occurrence tests from community ecology can 
+##' identify positive and negative epistasis between inversions in Mimulus 
+##' guttatus.
+##' 
+##' @description This script will perform all the co-occurence analysis.
+##' 
+##' @author Luis Javier Madrigal-Roca & John K. Kelly
+##' 
+##' @date: 2024-05-27
+##' ____________________________________________________________________________
+
+## >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> START <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 ## *****************************************************************************
 ## 3) Chi-square test for independence of inversions ----
@@ -53,7 +63,7 @@ results_x2_filtered_df <- sapply(X = results_x2_filtered_df,
                                  FUN = p_corrector, var = "p", 
                         simplify = F)
 
-# Getting the number of combinations without dosage
+# Getting the number of combinations within 3x3 framework
 combos_without_d <- unique(do.call(
   'rbind', results_x2_filtered_df)$INV_combination)
 
@@ -1016,4 +1026,4 @@ ggplot(data = eigenvectors_df, aes(x = Genes, y = eigenvector)) +
 
 dev.off()
 
-##' <<<<<<<<<<<<<<<<<<<<<<<<<<<< End of the script >>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+## <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< END >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ##
