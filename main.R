@@ -38,7 +38,7 @@ required_libraries <- c("dplyr", "ggplot2", "foreach", "doParallel",
                         "chisq.posthoc.test", "MASS", "repmod",
                         "gtools", "viridis", "car", "nortest",
                         "tidyr", "corrplot", "genetics", "copula",
-                        "gridExtra", "mgcv")
+                        "gridExtra", "mgcv", "qvalue")
 
 ## 1.3) Sourcing the setup function ----
 source("src/set_environment.R")

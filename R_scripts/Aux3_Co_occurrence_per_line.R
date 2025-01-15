@@ -99,7 +99,7 @@ for (i in 1:length(names(x2_results_filtered_expanded))) {
 
 for (i in 1:length(names(x2_results_filtered_expanded))) {
   x2_results_filtered_expanded[[i]] <- x2_results_filtered_expanded[[i]] |>
-    dplyr::rename(X2_global = X2, p_X2_global = p, p_X2_corrected = p_corrected)
+    dplyr::rename(X2_global = X2, p_X2_global = p, q_X2 = q_value)
   
   rm(i)
 }
@@ -164,8 +164,8 @@ for (i in names(results_posthoc_x2_df_filtered))
 
 for (i in names(results_posthoc_x2_df_filtered))
 {
-  results_posthoc_x2_df_filtered[[i]] <- results_posthoc_x2_df_filtered[[i]] |>
-    mutate(p_adjusted = p.adjust(p_value, method = "BY"))
+  results_posthoc_x2_df_filtered[[i]] <- 
+    p_corrector(results_posthoc_x2_df_filtered[[i]], var = 'p_value')
   
   rm(i)
 }
@@ -189,7 +189,7 @@ for (i in 1: length(names(x2_results_filtered_expanded)))
               "standardized_residual", "INV1", "INV2", "ID1_posthoc",
               "ID2_posthoc", "chrom1_posthoc", "chrom2_posthoc")) |>
     dplyr::rename(p_X2_posthoc = p_value,
-           p_X2_posthoc_corrected = p_adjusted)
+           q_X2_posthoc = q_value)
 }
 
 ## Getting the number of combinations with dosage
@@ -373,13 +373,13 @@ final_result <- final_result |>
   dplyr::select(line, INV_1, INV_2, chrom_1, chrom_2, X2_global, p_X2_global, 
          p_X2_posthoc, p_X2_posthoc_corrected, relative_contribution, 
          Residual, alpha_mle, p_value, 
-         p_corrected, jaccard_jaccard_tanimoto, p_value_jaccard_tanimoto,
+         q_value, jaccard_jaccard_tanimoto, p_value_jaccard_tanimoto,
          p_corrected_jaccard_tanimoto) |>
   rename(Line = line,
          Chr_1 = chrom_1, Chr_2 = chrom_2,
          X2_SR = Residual, X2_RC = relative_contribution,
          A_p = p_value, A_alpha = alpha_mle, 
-         A_p_corrected = p_corrected,
+         A_p_corrected = q_value,
          Jaccard = jaccard_jaccard_tanimoto, J_p = p_value_jaccard_tanimoto, 
          J_p_corrected = p_corrected_jaccard_tanimoto)
 

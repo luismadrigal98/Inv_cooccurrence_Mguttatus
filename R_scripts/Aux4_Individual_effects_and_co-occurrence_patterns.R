@@ -98,4 +98,5 @@ plot_2 <- ggplot(long_data, aes(x = Value, y = SDV)) +
 
 print(plot_2)
 dev.off()
+
 ## <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< END >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ##
