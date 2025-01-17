@@ -15,7 +15,7 @@ p_corrector <- function(df, var = "p", FDR = 0.1,
   
   df <- df |> mutate(q_value = qvalue(df[, var], fdr.level = FDR,
                                       pi0.method = pi0.method, 
-                                      adj = adj))$qvalues
+                                      adj = adj)$qvalues)
   
   return(df)
 }
