@@ -8,12 +8,12 @@ count_motifs_in_net <- function(network, motifs)
   #' @return A data frame with the motifs and their counts
   #' ___________________________________________________________________________
   
-  motifs_names <- names(motifs)
+  motif_names <- names(motifs)
   
   counts <- sapply(motifs, function(x)
     {
       count_subgraph_isomorphisms(pattern = x, target = network) 
     }, simplify = T)
   
-  data.frame(motifs_names, counts)
+  data.frame(motif_names, counts)
 }
