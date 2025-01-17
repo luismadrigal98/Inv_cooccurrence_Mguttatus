@@ -1,5 +1,5 @@
 sig_network_builder <- function(nodes, meta_nodes, edges, type = "both",
-                                co_occ_color = "blue",
+                                co_occ_color = "navy",
                                 rep_color = "red",
                                 non_sig_color = "grey")
 {
@@ -50,12 +50,14 @@ sig_network_builder <- function(nodes, meta_nodes, edges, type = "both",
                                  ifelse(all(Jaccard < 0, J_p < 0.05), 
                                         rep_color,
                                         ifelse(all(Jaccard > 0, J_p > 0.05), 
-                                               "yellow", 
-                                               "#5E4FA2")))))
+                                               "cyan", 
+                                               "orange")))),
+           J_p = J_p)
   
   edges_net <- data.frame(from = edges$INV_1, 
                           to = edges$INV_2, 
                           weight = edges$Jaccard, 
+                          J_p = edges$J_p,
                           color = edges$color,
                           color.order = factor(edges$color, 
                                                levels = c(non_sig_color,

@@ -1065,6 +1065,17 @@ ggplot(data = eigenvectors_df, aes(x = Genes, y = eigenvector)) +
 
 dev.off()
 
-# 9.3) ---- 
+# 9.3) Motif analysis ---- 
+
+# Getting the 3rd and 4th order motifs from the networks
+# Defining the motifs (notation: s.x.y, where x is the order and y the isoform)
+# Note that these are only a subset of all possible isophorms
+# The analysis will be only performed over those subgraphs with nodes whose edges
+# are associated to a p <0.5
+
+s.3.2 <- graph_from_isomorphism_class(3, 2, F) # 1--3 1--2
+s.3.3 <- graph_from_isomorphism_class(3, 3, F) # 2--3 1--3 1--2 (triangle)
+s.4.1
+
 
 ## <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< END >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ##
