@@ -1,14 +1,29 @@
 ##' >>>>>>>>>>>>>>>>>>>>>>>> AUXILIARY SCRIPT 3 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 ##' 
-##' @title Are you with me? Co-occurrence tests from community ecology can 
-##' identify positive and negative epistasis between inversions in Mimulus 
-##' guttatus.
+##' @title Are you with me? Co-occurrence tests from community ecology can identify positive 
+##' and negative epistasis between inversions in Mimulus guttatus.
 ##' 
-##' @description This script will perform all the co-occurence analysis.
-##' 
+##' @description This script performs comprehensive co-occurrence analysis using multiple
+##' statistical approaches:
+##'   - Chi-square tests for independence
+##'   - Jaccard similarity indices
+##'   - Affinity measures from community ecology
+##'   - Network analysis of inversion relationships
+##'
 ##' @author Luis Javier Madrigal-Roca & John K. Kelly
 ##' 
-##' @date: 2024-05-27
+##' @date 2024-05-27
+##' @last_updated 2025-01-17
+##' 
+##' @inputs 
+##'   - Data_d_l: List of dosage matrices per line
+##'   - Data_p_a: List of presence/absence matrices
+##'   - metadata: Information about inversions
+##'
+##' @outputs
+##'   - Multiple CSV files with analysis results
+##'   - PDF plots showing relationships between inversions
+##'   - Network visualizations of inversion relationships
 ##' ____________________________________________________________________________
 
 ## >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> START <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -17,12 +32,21 @@
 ## 3) Chi-square test for independence of inversions ----
 ## _____________________________________________________________________________
 
+## Expected frequencies under independence
+## Matrix represents the null hypothesis of no association between inversions
+## Rows and columns represent dosage levels (0, 1, 2)
+
 expec_freq <- matrix(data = c(1/16, 2/16, 1/16, 2/16, 4/16, 2/16,
                               1/16, 2/16, 1/16), nrow = 3, ncol = 3, 
                      dimnames = list(c('0', '1', '2'),
                                      c('0', '1', '2')))
 
 # 3.2) X2 square test ----
+
+## Performs chi-square tests for all possible inversion pairs
+## Tests independence of inheritance patterns between inversions
+## Includes correction for multiple testing using Benjamini-Yekutieli method when
+## exploiting the post-hoc framework for the X2 square test
 
 results_x2 <- lapply(X = Data_d_l, FUN = function(observed_matrix)
 {
@@ -210,6 +234,11 @@ Data_p_a <- lapply(Data_p_a, function(x) x[!apply(x, 1,
 
 # 4.1) Jaccard ----
 
+## Jaccard similarity analysis
+## Measures the overlap in presence/absence patterns between inversions
+## Uses bootstrap resampling (10000 iterations) for significance testing
+## Results corrected for multiple testing
+
 jaccard_tanimoto_results <- sapply(X = Data_p_a, 
                                    FUN = jaccard.test.pairwise,
                                    method = 'bootstrap',
@@ -274,6 +303,11 @@ jaccard_tanimoto_results_df_filtered <- sapply(X = jaccard_tanimoto_results_df_f
                                       simplify = F)
 
 # 4.2) Affinity measure ----
+
+## Affinity measure analysis
+## Quantifies strength of association between inversions
+## Based on presence/absence patterns
+## Includes significance testing and multiple test correction
 
 results_affinity <- lapply(X = Data_p_a, FUN = function(x)
 {
@@ -738,7 +772,14 @@ rob.pvals(robust_model1)
 rob.pvals(robust_model2)
 rob.pvals(robust_model3)
 
-# 8) Network analysis ----
+# 8) Network visualization ----
+
+## Creates network representations of inversion relationships
+## - Nodes represent inversions at different dosage levels
+## - Edges represent significant associations
+## - Network metrics calculated: clustering coefficient, path length, 
+##   eigenvector centrality
+## - Special focus on inversions 29, 32, and 40 as case study
 
 # Splitting the final result data frame into a list of data frames per line
 
@@ -1023,5 +1064,7 @@ ggplot(data = eigenvectors_df, aes(x = Genes, y = eigenvector)) +
   xlim(0, 110)
 
 dev.off()
+
+# 9.3) ---- 
 
 ## <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< END >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ##
