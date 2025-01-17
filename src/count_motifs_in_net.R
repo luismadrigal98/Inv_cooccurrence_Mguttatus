@@ -1,4 +1,4 @@
-count_motifs <- function(network, motifs)
+count_motifs_in_net <- function(network, motifs)
 {
   #' This function will count the presence of each motif in an individual network
   #' 
