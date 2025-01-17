@@ -1071,11 +1071,26 @@ dev.off()
 # Defining the motifs (notation: s.x.y, where x is the order and y the isoform)
 # Note that these are only a subset of all possible isophorms
 # The analysis will be only performed over those subgraphs with nodes whose edges
-# are associated to a p <0.5
+# are associated to a p < 0.05
+
+# 9.3.1) Subsetting the networks ----
+
+networks_filtered <- lapply(networks, function(network) {
+  subgraph <- delete_edges(graph = network, 
+                           edges = which(E(network)$J_p > 0.05))
+  subgraph
+})
 
 s.3.2 <- graph_from_isomorphism_class(3, 2, F) # 1--3 1--2
 s.3.3 <- graph_from_isomorphism_class(3, 3, F) # 2--3 1--3 1--2 (triangle)
-s.4.1
+s.4.4 <- graph_from_isomorphism_class(4, 4, F) # 1--4 1--3 1--2 (star)
+s.4.6 <- graph_from_isomorphism_class(4, 6, F) # 1--4 2--3 (4-point-linear)
+s.4.7 <- graph_from_isomorphism_class(4, 7, F) # 1--4 2--3 1--3 1--2 (triangle-to-line)
+s.4.8 <- graph_from_isomorphism_class(4, 8, F) # 2--4 1--4 2--3 1--3 (square)
+s.4.9 <- graph_from_isomorphism_class(4, 9, F) # 2--4 1--4 2--3 1--3 1--2 (4-cycle)
+s.4.10 <- graph_from_isomorphism_class(4, 10, F) # 3--4 2--4 1--4 2--3 1--3 1--2 (K5)
+
+motifs <- list(s.3.2, s.3.3, s.4.4, s.4.6, s.4.7, s.4.8, s.4.9, s.4.10)
 
 
 ## <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< END >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ##
