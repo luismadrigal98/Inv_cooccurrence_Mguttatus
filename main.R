@@ -188,7 +188,7 @@ source("R_scripts/Aux4_Individual_effects_and_co-occurrence_patterns.R")
 #' co-occurrence metrics will be established at the allele level, even though we
 #' are exploring genotypic associations in this study.
 
-# <<<<<<<<<<<<<<<<<<<<<<<<<<< COMPLEMENTARY >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# <<<<<<<<<<<<<<<<<<<<<<<<<<< COMPLEMENTARY >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 source("R_scripts/Aux5_LD_vs_Co_occurence_metrics.R")
 
 ## *****************************************************************************

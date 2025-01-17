@@ -70,8 +70,8 @@ corrplot(cor_matrix, method = "color", type = "upper", order = "hclust",
 dev.off()
 
 # GLM
-# It could be appropriate Poisson or the Negative Binomial (nevertheles, there is
-# over dispersion in the data, so, negative binomial is the best choice)
+# It could be appropriate Poisson or the Negative Binomial (nevertheless, there is
+# over-dispersion in the data, so, negative binomial is the best choice)
 
 quasi_poisson_model <- glm(sig_count ~ SDV + Line, 
                            data = analysis_data, family = quasipoisson())

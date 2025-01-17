@@ -1,6 +1,6 @@
 dosage_splitter <- function(Data, probes_col = 1)
 {
-  #' Function toread the dosage levels and transform them into presence/absence
+  #' Function to read the dosage levels and transform them into presence/absence
   #' 
   #' This function is designed to read the dosage levels of the plants and
   #' transform them into presence/absence. This is a necessary step to analyze
