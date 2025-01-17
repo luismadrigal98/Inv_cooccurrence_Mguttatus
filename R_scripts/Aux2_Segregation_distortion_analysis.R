@@ -50,13 +50,12 @@ goodness_of_fit_df <- lapply(goodness_of_fit, function(x) do.call(rbind, x))
 for (i in 1:length(goodness_of_fit_df))
 {
   goodness_of_fit_df[[i]][["Line"]] <- rep(names(goodness_of_fit_df)[i], 
-                                      nrow(goodness_of_fit_df[[i]]))
+                                           nrow(goodness_of_fit_df[[i]]))
   
   # Multiple testing correction
   
   goodness_of_fit_df[[i]][["p_corrected"]] <- 
-   qvalue(goodness_of_fit_df[[i]]$p_value, fdr.level = 0.1, adj = 1.2,
-          pi0.method="bootstrap")
+    p.adjust(goodness_of_fit_df[[i]]$p_value, method = 'BH')
   rm(i)
 }
 
