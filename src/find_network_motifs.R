@@ -83,6 +83,8 @@ find_network_motifs <- function(networks, motifs, plot_individual_motifs = TRUE,
                                                   function(i) {
                                                     permutation_test_motifs(
                                                       results,
+                                                      networks,
+                                                      motifs,
                                                       combinations$Cross[i], 
                                                       combinations$motif_names[i],
                                                       n_permutations,
@@ -92,6 +94,8 @@ find_network_motifs <- function(networks, motifs, plot_individual_motifs = TRUE,
       # Run tests sequentially
       significance_results <- lapply(1:nrow(combinations), function(i) {
         permutation_test_motifs(results,
+                                networks,
+                                motifs,
                                 combinations$Cross[i], 
                                 combinations$motif_names[i],
                                 n_permutations,

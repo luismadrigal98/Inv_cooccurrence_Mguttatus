@@ -1,10 +1,11 @@
-permutation_test_motifs <- function(obs_res, 
+permutation_test_motifs <- function(obs_res, networks, motifs,
                                     cross, motif_name, 
                                     n_permutations, parallel = T) 
 {
   #' Test the significance of a motif in a network using permutation tests
-  #' 
   #' @param obs_res A data frame with the observed results
+  #' @param networks A list of networks
+  #' @param motifs A list of motifs
   #' @param cross The name of the network
   #' @param motif_name The name of the motif
   #' @param n_permutations The number of permutations to perform
