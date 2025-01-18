@@ -39,7 +39,8 @@ permutation_test_motifs <- function(obs_res, networks, motifs,
     null_counts <- numeric(n_permutations)
     
     for(i in seq_len(n_permutations)) {
-      rand_graph <- sample_degseq(degree_seq, method = "simple")
+      rand_graph <- sample_degseq(degree_seq, method = "configuration")
+      rand_graph <- simplify(rand_graph)
       null_counts[i] <- count_subgraph_isomorphisms(pattern = motif, 
                                                     target = rand_graph)
     }  
