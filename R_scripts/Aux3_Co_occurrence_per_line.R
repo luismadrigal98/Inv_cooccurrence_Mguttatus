@@ -29,7 +29,7 @@
 ## >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> START <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 ## *****************************************************************************
-## 3) Chi-square test for independence of inversions ----
+## 1) Chi-square test for independence of inversions ----
 ## _____________________________________________________________________________
 
 ## Expected frequencies under independence
@@ -41,7 +41,7 @@ expec_freq <- matrix(data = c(1/16, 2/16, 1/16, 2/16, 4/16, 2/16,
                      dimnames = list(c('0', '1', '2'),
                                      c('0', '1', '2')))
 
-# 3.2) X2 square test ----
+# 1.1) X2 square test ----
 
 ## Performs chi-square tests for all possible inversion pairs
 ## Tests independence of inheritance patterns between inversions
@@ -128,7 +128,7 @@ for (i in 1:length(names(x2_results_filtered_expanded))) {
   rm(i)
 }
 
-# 3.1) Post-hoc analysis for the X2 test ----
+# 1.2) Post-hoc analysis for the X2 test ----
 
 results_posthoc_x2 <- lapply(X = Data_d_l, FUN = function(observed_matrix)
 {
@@ -221,7 +221,7 @@ combos_with_d <- unique(do.call(
   'rbind', x2_results_filtered_expanded)$INV_combination)
 
 ## *****************************************************************************
-## 4) Calculation of alternative indexes used in community studies ----
+## 2) Calculation of alternative indexes used in community studies ----
 ## _____________________________________________________________________________
 
 # Filtering out rows with 0 marginals. If something is not there in any instance,
@@ -232,7 +232,7 @@ Data_p_a <- lapply(Data_p_a, function(x) x[!apply(x, 1,
 
 # Instance INV_49_2 in line 444 was eliminated from the analysis
 
-# 4.1) Jaccard ----
+# 2.1) Jaccard ----
 
 ## Jaccard similarity analysis
 ## Measures the overlap in presence/absence patterns between inversions
@@ -302,7 +302,7 @@ jaccard_tanimoto_results_df_filtered <- sapply(X = jaccard_tanimoto_results_df_f
                                       FUN = p_corrector, var = "p_value",
                                       simplify = F)
 
-# 4.2) Affinity measure ----
+# 2.2) Affinity measure ----
 
 ## Affinity measure analysis
 ## Quantifies strength of association between inversions
@@ -349,7 +349,7 @@ results_affinity_filtered <- sapply(X = results_affinity_filtered,
                                     var = "p_value",
                                     simplify = F)
 
-# 5) Extracting the significant values detected for the three scores ----
+# 3) Extracting the significant values detected for the three scores ----
 
 # Common field for all datasets: INV_combination
 
@@ -415,7 +415,9 @@ final_result <- final_result |>
          Jaccard = jaccard_jaccard_tanimoto, J_p = p_value_jaccard_tanimoto, 
          J_p_corrected = p_corrected_jaccard_tanimoto)
 
-# 5.1) Relaxed results ----
+# 3.1) Relaxed results ----
+
+# Significant contrasts detected by any or all frameworks using the raw p-values
 
 final_result_relaxed_any <- final_result |> 
   filter(p_X2_posthoc < 0.05 | A_p < 0.05 | J_p < 0.05)
@@ -423,7 +425,12 @@ final_result_relaxed_any <- final_result |>
 final_result_relaxed_all <- final_result |>
   filter(p_X2_global < 0.05 & p_X2_posthoc < 0.05 & A_p < 0.05 & J_p < 0.05)
 
-# 5.2) Stringent results ----
+# 3.2) Stringent results ----
+
+# Significant contrasts detected by any or all frameworks using the corrected p-values
+# The p-value correction methods are too stringent, considering the nature and
+# complexity of this kind of data. Future efforts must be made to generate an
+# appropriate correction method.
 
 final_result_stringent_any <- final_result |> 
   filter(p_X2_posthoc_corrected < 0.05 | A_p_corrected < 0.05 | 
@@ -1094,6 +1101,89 @@ motifs <- list(s.3.2, s.3.3, s.4.4, s.4.6, s.4.7, s.4.8, s.4.9, s.4.10)
 names(motifs) <- c("s.3.2", "s.3.3", "s.4.4", "s.4.6", "s.4.7", "s.4.8", "s.4.9", 
                    "s.4.10")
 
+## Searching for motifs and testing their significance
 
+motifs_results <- find_network_motifs(networks_filtered,
+                                      motifs,
+                                      plot_individual_motifs = T,
+                                      test_significance = T,
+                                      parallel = T,
+                                      prevalence_thr = 200,
+                                      n_permutations = 1000)
+
+# 1. Heatmap of motif significance
+plot_significance_heatmap <- function(data) {
+  ggplot(data, aes(x = motif_names, y = Cross, fill = -log10(p_adjusted))) +
+    geom_tile() +
+    scale_fill_viridis(name = "-log10(adj.P)") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = "Motif Significance Across Networks",
+         x = "Motif", y = "Network") +
+    coord_equal()
+}
+
+# 2. Enrichment plot (observed vs expected)
+plot_enrichment <- function(data) {
+  data %>%
+    mutate(enrichment = observed/mean_null,
+           significant = p_adjusted < 0.05) %>%
+    ggplot(aes(x = motif_names, y = enrichment, fill = significant)) +
+    geom_bar(stat = "identity") +
+    facet_wrap(~Cross, scales = "free_y") +
+    scale_fill_manual(values = c("grey70", "dodgerblue")) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = "Motif Enrichment by Network",
+         x = "Motif", y = "Observed/Expected Ratio")
+}
+
+# 3. Z-score visualization
+plot_zscores <- function(data) {
+  ggplot(data, aes(x = reorder(paste(Cross, motif_names), z_score), 
+                   y = z_score, fill = p_adjusted < 0.05)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = c("grey70", "dodgerblue"),
+                      name = "Significant") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = "Motif Z-scores Across Networks",
+         x = "Network-Motif Pair", y = "Z-score")
+}
+
+# 4. Counts comparison
+plot_counts_comparison <- function(data) {
+  data %>%
+    ggplot(aes(x = mean_null, y = observed)) +
+    geom_point(aes(color = p_adjusted < 0.05, size = abs(z_score))) +
+    geom_abline(linetype = "dashed", color = "grey50") +
+    scale_color_manual(values = c("grey70", "dodgerblue"),
+                       name = "Significant") +
+    facet_wrap(~motif_names, scales = "free") +
+    theme_minimal() +
+    labs(title = "Observed vs Expected Motif Counts",
+         x = "Expected Count", y = "Observed Count")
+}
+
+# Create combined plot
+generate_motif_analysis_plots <- function(data) {
+  p1 <- plot_significance_heatmap(data)
+  p2 <- plot_enrichment(data)
+  p3 <- plot_zscores(data)
+  p4 <- plot_counts_comparison(data)
+  
+  # Save the plots
+  pdf("motif_analysis_results.pdf", width = 12, height = 10)
+  print((p1 + p2) / (p3 + p4))
+  dev.off()
+  
+  # Return the plots as a list
+  list(
+    heatmap = p1,
+    enrichment = p2,
+    zscores = p3,
+    counts = p4
+  )
+}
 
 ## <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< END >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ##
