@@ -1116,26 +1116,31 @@ plot_significance_heatmap <- function(data) {
   ggplot(data, aes(x = motif_names, y = Cross, fill = -log10(p_adjusted))) +
     geom_tile() +
     scale_fill_viridis(name = "-log10(adj.P)") +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          axis.text = element_text(color = 'black'),
+          panel.grid = element_blank()) +
     labs(title = "Motif Significance Across Networks",
-         x = "Motif", y = "Network") +
-    coord_equal()
+         x = "Motif", y = "Network")
 }
 
 # 2. Enrichment plot (observed vs expected)
 plot_enrichment <- function(data) {
   data %>%
-    mutate(enrichment = observed/mean_null,
-           significant = p_adjusted < 0.05) %>%
-    ggplot(aes(x = motif_names, y = enrichment, fill = significant)) +
-    geom_bar(stat = "identity") +
-    facet_wrap(~Cross, scales = "free_y") +
+    mutate(enrichment = observed / mean_null,
+           significant = p_adjusted < 0.05,
+           motif_cross = interaction(motif_names, Cross, sep = " - ")) %>%
+    dplyr::
+    ggplot(aes(x = reorder(motif_cross, enrichment), 
+               y = enrichment, fill = significant)) +
+    geom_bar(stat = "identity", position = "dodge") +
     scale_fill_manual(values = c("grey70", "dodgerblue")) +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    labs(title = "Motif Enrichment by Network",
-         x = "Motif", y = "Observed/Expected Ratio")
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          axis.text = element_text(color = "black"),
+          panel.grid = element_blank()) +
+    labs(title = "Motif Enrichment by Cross",
+         x = "Motif - Cross", y = "Observed/Expected Ratio")
 }
 
 # 3. Z-score visualization
@@ -1145,8 +1150,10 @@ plot_zscores <- function(data) {
     geom_bar(stat = "identity") +
     scale_fill_manual(values = c("grey70", "dodgerblue"),
                       name = "Significant") +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          axis.text = element_text(color = "black"),
+          panel.grid = element_blank()) +
     labs(title = "Motif Z-scores Across Networks",
          x = "Network-Motif Pair", y = "Z-score")
 }
@@ -1154,13 +1161,14 @@ plot_zscores <- function(data) {
 # 4. Counts comparison
 plot_counts_comparison <- function(data) {
   data %>%
-    ggplot(aes(x = mean_null, y = observed)) +
+    ggplot(aes(x = mean_null, y = observed, group = motif_names)) +
     geom_point(aes(color = p_adjusted < 0.05, size = abs(z_score))) +
     geom_abline(linetype = "dashed", color = "grey50") +
     scale_color_manual(values = c("grey70", "dodgerblue"),
                        name = "Significant") +
-    facet_wrap(~motif_names, scales = "free") +
-    theme_minimal() +
+    theme_bw() +
+    theme(axis.text = element_text(color = "black"),
+          panel.grid = element_blank()) +
     labs(title = "Observed vs Expected Motif Counts",
          x = "Expected Count", y = "Observed Count")
 }
@@ -1171,11 +1179,11 @@ generate_motif_analysis_plots <- function(data) {
   p2 <- plot_enrichment(data)
   p3 <- plot_zscores(data)
   p4 <- plot_counts_comparison(data)
+  p <- gridExtra::grid.arrange(p1, p2, p3, p4, nrow = 2)
   
   # Save the plots
-  pdf("motif_analysis_results.pdf", width = 12, height = 10)
-  print((p1 + p2) / (p3 + p4))
-  dev.off()
+  ggsave("./Results/Plots/Motif_analysis_results.pdf", p, 
+         width = 8, height = 6)
   
   # Return the plots as a list
   list(
@@ -1185,5 +1193,9 @@ generate_motif_analysis_plots <- function(data) {
     counts = p4
   )
 }
+
+# Visualization of the results
+
+generate_motif_analysis_plots(motifs_results)
 
 ## <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< END >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ##
