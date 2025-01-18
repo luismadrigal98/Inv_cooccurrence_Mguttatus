@@ -1,7 +1,23 @@
 find_network_motifs <- function(networks, motifs, plot_individual_motifs = TRUE,
                                 test_significance = TRUE, parallel = TRUE,
+                                prevalence_thr = NULL,
                                 n_permutations = 1000) 
 {
+  #' Find motifs in networks and test their significance
+  #' 
+  #' @param networks A list of igraph objects
+  #' @param motifs A list of igraph objects
+  #' @param plot_individual_motifs Logical indicating whether to plot the 
+  #' individual motifs
+  #' @param test_significance Logical indicating whether to test the significance 
+  #' the motifs
+  #' @param parallel Logical indicating whether to run the permutation tests 
+  #' in parallel
+  #' @param prevalence_thr Numeric indicating the minimum prevalence of a motif 
+  #' to be considered
+  #' @param n_permutations The number of permutations to perform
+  #' ___________________________________________________________________________
+  
   net_names <- names(networks)
   
   observed_counts <- lapply(networks, count_motifs_in_net, motifs)
@@ -25,10 +41,15 @@ find_network_motifs <- function(networks, motifs, plot_individual_motifs = TRUE,
   results <- results |>
     dplyr::filter(motif_names %in% names(motifs))
   
+  if (!is.null(prevalence_thr))
+  {
+    results <- results |>
+      dplyr::filter(counts > prevalence_thr)
+  }
+  
   # Plotting the individual motifs as reference
   if (plot_individual_motifs) {
-    plot_dir <- file.path(getwd(), "Results", "Plots", "Individual_motifs", 
-                          "Networks", "Motifs")
+    plot_dir <- file.path(getwd(), "Results", "Plots", "Networks", "Motifs")
     
     if (!dir.exists(plot_dir)) {
       dir.create(plot_dir, recursive = TRUE)
@@ -45,11 +66,7 @@ find_network_motifs <- function(networks, motifs, plot_individual_motifs = TRUE,
   # Hypothesis testing framework
   if (test_significance) {
     # Create combinations of networks and motifs to test
-    combinations <- expand.grid(
-      Cross = results$Cross,
-      motif_names = results$motif_names,
-      stringsAsFactors = FALSE
-    )
+    combinations <- results[,c('motif_names', 'Cross')]
     
     if (parallel) {
 
@@ -58,7 +75,7 @@ find_network_motifs <- function(networks, motifs, plot_individual_motifs = TRUE,
                               c("networks", "motifs", "results", 
                                 "count_motifs_in_net", "permutation_test_motifs",
                                 "rewire", "keeping_degseq", "gsize",
-                                "graph.get.subisomorph"), 
+                                "mclapply"), 
                               envir = environment())
       
       # Run permutation tests
@@ -68,14 +85,17 @@ find_network_motifs <- function(networks, motifs, plot_individual_motifs = TRUE,
                                                       results,
                                                       combinations$Cross[i], 
                                                       combinations$motif_names[i],
-                                                      n_permutations)
+                                                      n_permutations,
+                                                      parallel)
                                                   })
     } else {
       # Run tests sequentially
       significance_results <- lapply(1:nrow(combinations), function(i) {
-        permutation_test_motifs(combinations$Cross[i], 
+        permutation_test_motifs(results,
+                                combinations$Cross[i], 
                                 combinations$motif_names[i],
-                                n_permutations)
+                                n_permutations,
+                                parallel)
       })
     }
     
