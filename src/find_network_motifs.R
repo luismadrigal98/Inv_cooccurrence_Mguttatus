@@ -75,7 +75,7 @@ find_network_motifs <- function(networks, motifs, plot_individual_motifs = TRUE,
                               c("networks", "motifs", "results", 
                                 "count_motifs_in_net", "permutation_test_motifs",
                                 "rewire", "keeping_degseq", "gsize",
-                                "mclapply"), 
+                                "mclapply", "degree"), 
                               envir = environment())
       
       # Run permutation tests

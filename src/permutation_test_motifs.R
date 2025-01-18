@@ -20,33 +20,36 @@ permutation_test_motifs <- function(obs_res, networks, motifs,
   observed <- obs_res$counts[obs_res$Cross == cross & 
                                obs_res$motif_names == motif_name]
   
-  # Pre-allocate vector for results
-  null_counts <- numeric(n_permutations)
-  
   # Calculate rewire iterations once
-  rewire_iters <- gsize(network) * 10
+  degree_seq <- degree(network)
   
   if (parallel)
   {
     n_cores <- parallel::detectCores() - 1
       
     null_counts <- unlist(mclapply(1:n_permutations, function(i) {
-      rewired <- rewire(network, keeping_degseq(niter = rewire_iters))
-      count_subgraph_isomorphisms(pattern = motif, target = rewired)
+      rand_graph <- sample_degseq(degree_seq, method = "simple")
+      count_subgraph_isomorphisms(pattern = motif, target = rand_graph)
     }, mc.cores = n_cores))
   }
   
   else
   {
+    # Pre-allocate vector for results
+    null_counts <- numeric(n_permutations)
+    
     for(i in seq_len(n_permutations)) {
-      rewired <- rewire(network, keeping_degseq(niter = rewire_iters))
-      null_counts[i] <- count_subgraph_isomorphisms(pattern = motif, target = rewired)
+      rand_graph <- sample_degseq(degree_seq, method = "simple")
+      null_counts[i] <- count_subgraph_isomorphisms(pattern = motif, 
+                                                    target = rand_graph)
     }  
   }
   
   # Vectorized calculations for statistics
   mean_null <- mean(null_counts)
   sd_null <- sd(null_counts)
+  # Preventing division by 0
+  sd_null <- ifelse(sd_null == 0, sd_null + 1e-10, sd_null) ## Add a small constant
   z_score <- (observed - mean_null) / sd_null
   p_value <- sum(null_counts >= observed) / n_permutations  # More precise calculation
   
