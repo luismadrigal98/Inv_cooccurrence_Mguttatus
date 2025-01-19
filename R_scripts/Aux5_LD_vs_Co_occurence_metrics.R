@@ -19,7 +19,8 @@ freqs <- seq(0.1, 0.9, 0.1)
 
 ## 2) Getting the results for the different frequencies and replicates ----
 
-results <- compare_measures(freqs, n_reps = 1000, association_strength = 0.5)
+results <- compare_measures(freqs, n_reps = 10000, 
+                            association_strength = 0.5)
 
 ## 3) Plotting the mean value of the statistics as a function of the allele freq ----
 
