@@ -489,6 +489,8 @@ for (i in names(x2_p_square_matrix))
 }
 
 # 6.2) Evidence according to X2_posthoc, Jaccard, and Affinity ----
+# Binarized support analysis. Removed from paper to reduce the amount of information
+# Similar conclusion can be derived from the following linear models
 
 support_matrix <- mapply(support_counter, 
                          supp_X2_posthoc = x2_p_post_hoc_square_matrix,
@@ -517,6 +519,9 @@ for (i in names(support_matrix))
 }
 
 ## 6.3) Detecting Linkage Groups ----
+
+# Extra analysis (not included in paper)
+# Sanity check for seeing if the methods can detect linkage (they can!!)
 
 # Masking the p_values of contrast in different chromosomes
 
