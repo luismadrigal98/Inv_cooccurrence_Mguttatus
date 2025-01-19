@@ -876,7 +876,7 @@ plot_network_lite(networks_29_32_40,
 
 # Heterogeneity analysis ----
 
-# Analysis for non-dosage levels
+# Analysis for 3x3 framework
 mask1 <- c("Inv_29", "Inv_32", "Inv_40")
 G_replicated_omnibus <- perform_heterogeneity_analysis(
   mask = mask1,
@@ -885,7 +885,7 @@ G_replicated_omnibus <- perform_heterogeneity_analysis(
   degrees_of_freedom = 4
 )
 
-# Analysis for dosage levels
+# Analysis for 2x2 framework
 mask2 <- c("Inv_29_1", "Inv_29_2", "Inv_32_1", "Inv_32_2", 
            "Inv_40_1", "Inv_40_2")
 G_replicated <- perform_heterogeneity_analysis(
@@ -918,6 +918,11 @@ network_comparisons_df$comparison <- rownames(network_comparisons_df)
 
 # Reset the row names
 rownames(network_comparisons_df) <- NULL
+
+# Saving the results
+
+write.csv(network_comparisons_df, "Results/network_comparisons.csv", 
+          row.names = FALSE)
 
 # 9.1) Eigenvalue as a function of the number of genes in the inversion ----
 
@@ -1111,90 +1116,7 @@ motifs_results <- find_network_motifs(networks_filtered,
                                       prevalence_thr = 200,
                                       n_permutations = 1000)
 
-# 1. Heatmap of motif significance
-plot_significance_heatmap <- function(data) {
-  ggplot(data, aes(x = motif_names, y = Cross, fill = -log10(p_adjusted))) +
-    geom_tile() +
-    scale_fill_viridis(name = "-log10(adj.P)") +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1),
-          axis.text = element_text(color = 'black'),
-          panel.grid = element_blank()) +
-    labs(title = "Motif Significance Across Networks",
-         x = "Motif", y = "Network")
-}
-
-# 2. Enrichment plot (observed vs expected)
-plot_enrichment <- function(data) {
-  data %>%
-    mutate(enrichment = observed / mean_null,
-           significant = p_adjusted < 0.05,
-           motif_cross = interaction(motif_names, Cross, sep = " - ")) %>%
-    dplyr::
-    ggplot(aes(x = reorder(motif_cross, enrichment), 
-               y = enrichment, fill = significant)) +
-    geom_bar(stat = "identity", position = "dodge") +
-    scale_fill_manual(values = c("grey70", "dodgerblue")) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1),
-          axis.text = element_text(color = "black"),
-          panel.grid = element_blank()) +
-    labs(title = "Motif Enrichment by Cross",
-         x = "Motif - Cross", y = "Observed/Expected Ratio")
-}
-
-# 3. Z-score visualization
-plot_zscores <- function(data) {
-  ggplot(data, aes(x = reorder(paste(Cross, motif_names), z_score), 
-                   y = z_score, fill = p_adjusted < 0.05)) +
-    geom_bar(stat = "identity") +
-    scale_fill_manual(values = c("grey70", "dodgerblue"),
-                      name = "Significant") +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1),
-          axis.text = element_text(color = "black"),
-          panel.grid = element_blank()) +
-    labs(title = "Motif Z-scores Across Networks",
-         x = "Network-Motif Pair", y = "Z-score")
-}
-
-# 4. Counts comparison
-plot_counts_comparison <- function(data) {
-  data %>%
-    ggplot(aes(x = mean_null, y = observed, group = motif_names)) +
-    geom_point(aes(color = p_adjusted < 0.05, size = abs(z_score))) +
-    geom_abline(linetype = "dashed", color = "grey50") +
-    scale_color_manual(values = c("grey70", "dodgerblue"),
-                       name = "Significant") +
-    theme_bw() +
-    theme(axis.text = element_text(color = "black"),
-          panel.grid = element_blank()) +
-    labs(title = "Observed vs Expected Motif Counts",
-         x = "Expected Count", y = "Observed Count")
-}
-
-# Create combined plot
-generate_motif_analysis_plots <- function(data) {
-  p1 <- plot_significance_heatmap(data)
-  p2 <- plot_enrichment(data)
-  p3 <- plot_zscores(data)
-  p4 <- plot_counts_comparison(data)
-  p <- gridExtra::grid.arrange(p1, p2, p3, p4, nrow = 2)
-  
-  # Save the plots
-  ggsave("./Results/Plots/Motif_analysis_results.pdf", p, 
-         width = 8, height = 6)
-  
-  # Return the plots as a list
-  list(
-    heatmap = p1,
-    enrichment = p2,
-    zscores = p3,
-    counts = p4
-  )
-}
-
-# Visualization of the results
+# Visualization of the motif analysis
 
 generate_motif_analysis_plots(motifs_results)
 
