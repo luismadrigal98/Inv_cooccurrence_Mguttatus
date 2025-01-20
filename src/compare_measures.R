@@ -20,7 +20,7 @@ compare_measures <- function(freq_range,
   
   # Run in parallel
   results_list <- foreach(i = 1:nrow(param_grid), 
-                          .packages = c('foreach'),
+                          .packages = c('foreach', 'copula'),
                           .export = c('simulate_frequency_data',
                                       'geno_to_allele',
                                       'calculate_LD',
