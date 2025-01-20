@@ -31,8 +31,8 @@ analyze_metric_stability <- function(results)
   
   # Calculate normalized range for each frequency combination
   freq_ranges <- results %>%
-    group_by(freq1, freq2) %>%
-    summarize(
+    dplyr::group_by(freq1, freq2) %>%
+    dplyr::summarize(
       D_median = median(D),
       D_range = diff(range(D)),
       D_prime_median = median(D_prime),
@@ -60,7 +60,7 @@ analyze_metric_stability <- function(results)
       mean(abs(freq_ranges$Affinity_median))
     )
   ) %>%
-    mutate(relative_variation = sd/mean)
+    dplyr::mutate(relative_variation = sd/mean)
   
   # Create visualization of metric values vs frequencies
   freq_response_plot <- results %>%
@@ -82,15 +82,15 @@ analyze_metric_stability <- function(results)
   
   # Calculate mean values for each frequency combination
   freq_sensitivity <- results %>%
-    group_by(freq1, freq2) %>%
-    summarize(
+    dplyr::group_by(freq1, freq2) %>%
+    dplyr::summarize(
       D_mean = mean(D),
       D_prime_mean = mean(D_prime),
       cJaccard_mean = mean(cJaccard),
       Affinity_mean = mean(Affinity),
       .groups = 'drop'
     ) %>%
-    mutate(freq_prod = freq1 * freq2)
+    dplyr::mutate(freq_prod = freq1 * freq2)
   
   # Fit GAMs to assess complexity of frequency relationship
   gam_fits <- list(
@@ -106,7 +106,7 @@ analyze_metric_stability <- function(results)
   # Create correlation matrix between metrics and frequencies
   freq_correlations <- cor(
     results %>% 
-      select(freq1, freq2, D, D_prime, cJaccard, Affinity)
+      dplyr::select(freq1, freq2, D, D_prime, cJaccard, Affinity)
   )[1:2, 3:6]
   
   # Return all results
