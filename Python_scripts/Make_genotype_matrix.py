@@ -82,7 +82,7 @@ def make_genotype_matrix(input_folder, output_file):
         # Ensure all inversion columns exist
         for inv in all_inversions:
             if inv not in df.columns:
-                df[inv] = NA
+                df[inv] = pd.NA
         
         # Reorder columns to match final format
         df = df[['Cross', 'Probe'] + sorted(list(all_inversions))]
