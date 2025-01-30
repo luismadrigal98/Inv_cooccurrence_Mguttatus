@@ -4,7 +4,7 @@ It combines individual CSV files per cross and assigns 0 to inversions not prese
 
 Final result is a tab-delimited file with the following columns:
 - Cross
-- Probe
+- Plant
 - Columns for each inversion, coded as Inv_XX
 """
 
@@ -54,7 +54,7 @@ def make_genotype_matrix(input_folder, output_file):
                 logging.error(f"Could not extract cross name from {file}")
                 continue
             
-            # Add Cross and ensure Probe column exists
+            # Add Cross and ensure Plant column exists
             df['Cross'] = cross
             if 'Probes' not in df.columns:
                 df['Plant'] = df.index
@@ -76,7 +76,7 @@ def make_genotype_matrix(input_folder, output_file):
     
     # Combine all data frames
     logging.info("Combining data frames...")
-    results = pd.DataFrame(columns=['Cross', 'Probe'] + sorted(list(all_inversions)))
+    results = pd.DataFrame(columns=['Cross', 'Plant'] + sorted(list(all_inversions)))
     
     for df in data_frames:
         # Ensure all inversion columns exist
@@ -85,7 +85,7 @@ def make_genotype_matrix(input_folder, output_file):
                 df[inv] = pd.NA
         
         # Reorder columns to match final format
-        df = df[['Cross', 'Probe'] + sorted(list(all_inversions))]
+        df = df[['Cross', 'Plant'] + sorted(list(all_inversions))]
         results = pd.concat([results, df], ignore_index=True)
     
     # Save results
