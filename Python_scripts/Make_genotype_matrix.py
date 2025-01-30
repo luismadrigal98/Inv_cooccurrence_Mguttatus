@@ -48,7 +48,7 @@ def make_genotype_matrix(input_folder, output_file):
             
             # Extract cross name from filename
             try:
-                cross = file.rsplit('_')[1].split('.')[0]  # Adjust splitting logic based on your filenames
+                cross = file.rsplit('_', 1)[1].split('.')[0]  # Adjust splitting logic based on your filenames
                 logging.info(f"Processing cross: {cross}")
             except IndexError:
                 logging.error(f"Could not extract cross name from {file}")
@@ -82,12 +82,15 @@ def make_genotype_matrix(input_folder, output_file):
         # Ensure all inversion columns exist
         for inv in all_inversions:
             if inv not in df.columns:
-                df[inv] = pd.NA
+                df[inv] = 'NA'  # Assign a default value for inversions not present in this cross
         
         # Reorder columns to match final format
         df = df[['Cross', 'Plant'] + sorted(list(all_inversions))]
         results = pd.concat([results, df], ignore_index=True)
-    
+
+    # Remove last column from results
+    results = results.iloc[:, :-1]
+
     # Save results
     logging.info(f"Saving results to {output_file}")
     results.to_csv(output_file, sep="\t", index=False)
